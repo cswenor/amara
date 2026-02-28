@@ -1,0 +1,53 @@
+{
+  "id": "agent-director",
+  "name": "Agent Director",
+  "description": "Orchestrator: acknowledges complex tasks immediately, streams tool-progress updates, and spawns specialized sub-agents for discrete work units.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "ackMessage": {
+        "type": "string",
+        "default": "On it — I'll keep you posted."
+      },
+      "progressUpdates": {
+        "type": "boolean",
+        "default": true
+      },
+      "progressMinDurationMs": {
+        "type": "number",
+        "default": 2000
+      },
+      "orchestratorPrompt": {
+        "type": "boolean",
+        "default": true
+      },
+      "subAgentTimeoutMs": {
+        "type": "number",
+        "default": 300000
+      }
+    }
+  },
+  "uiHints": {
+    "ackMessage": {
+      "label": "Acknowledgment message",
+      "help": "Sent immediately when a complex task is detected, before the agent starts working"
+    },
+    "progressUpdates": {
+      "label": "Tool progress updates",
+      "help": "Stream a short message after each slow tool call so you can see what the agent is doing"
+    },
+    "progressMinDurationMs": {
+      "label": "Progress update threshold (ms)",
+      "help": "Only send a progress update if a tool call took longer than this many milliseconds"
+    },
+    "orchestratorPrompt": {
+      "label": "Inject orchestrator system prompt",
+      "help": "Overrides the system prompt to make the agent act as a director that breaks tasks down and delegates to sub-agents"
+    },
+    "subAgentTimeoutMs": {
+      "label": "Sub-agent timeout (ms)",
+      "help": "How long to wait for a spawned sub-agent before giving up (default 5 minutes)"
+    }
+  }
+}
