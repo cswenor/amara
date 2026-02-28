@@ -1,14 +1,9 @@
 {
-  "name": "agent-director",
+  "name": "amara",
   "version": "0.1.0",
   "private": true,
-  "description": "Orchestrator plugin for OpenClaw: instant acknowledgment, tool-progress streaming, and multi-agent task delegation",
+  "description": "Opinionated personal assistant — manages your messages, tasks, calendar, and information",
   "type": "module",
-  "openclaw": {
-    "extensions": [
-      "./plugins/agent-director/index.js"
-    ]
-  },
   "scripts": {
     "test": "node --test"
   },
