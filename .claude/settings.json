@@ -1,0 +1,113 @@
+{
+  "project": {
+    "name": "Amara"
+  },
+  "enabledPlugins": {},
+  "plansDirectory": ".claude/plans",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/pm-session-context.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/claude-command-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "./tools/scripts/claude-secret-bash-guard.sh"
+          },
+          {
+            "type": "command",
+            "command": "./tools/scripts/pm-commit-guard.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/portfolio-notify.sh needs-input"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/claude-secret-guard.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/portfolio-notify.sh needs-permission"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/portfolio-notify.sh running"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/claude-secret-detect.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/claude-secret-detect.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./tools/scripts/portfolio-notify.sh idle"
+          },
+          {
+            "type": "command",
+            "command": "./tools/scripts/pm-stop-guard.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

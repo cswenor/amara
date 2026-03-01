@@ -1,0 +1,14 @@
+{
+  "toolkit_version": "5690f03",
+  "installed_at": "2026-03-01T13:42:16Z",
+  "updated_at": "2026-03-01T13:42:16Z",
+  "owner": "cswenor",
+  "repo": "amara",
+  "prefix_lower": "amara",
+  "prefix_upper": "AMARA",
+  "display_name": "Amara",
+  "test_command": "make test",
+  "setup_command": "make setup",
+  "dev_command": "make dev",
+  "autonomous_mode": false
+}
