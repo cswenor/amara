@@ -292,7 +292,7 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 - **Event-loop blocking:** Long-running agent work must be delegated to OpenClaw sub-agent sessions (which run in separate contexts). The orchestrator's event loop must never block on agent execution.
 - **Poison messages:** Events that fail processing 3 times are moved to a dead-letter table (`amara_dlq`) with the error context. They do not block queue processing. A human alert is emitted via OTLP.
 - **Plugin crash isolation:** OpenClaw runs agent sessions in isolated contexts. A specialist agent crash does not take down the orchestrator — it surfaces as a task failure handled by the error path (Section 7).
-- **Circuit breaking:** If an external service (Gmail API, Calendar API) fails repeatedly, the orchestrator disables that channel's polling temporarily and emits a health warning. Re-enables after a configurable backoff (default: 5 minutes).
+- **Circuit breaking:** If an external service (Gmail API, Calendar API) fails repeatedly, the orchestrator disables that channel's processing temporarily and emits a health warning. For push-based channels (Gmail Pub/Sub), incoming webhooks are accepted but processing is paused. For tool-based channels (Calendar), invocations are suspended. Re-enables after a configurable backoff (default: 5 minutes).
 
 ### Data Stores
 

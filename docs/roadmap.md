@@ -74,8 +74,8 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 
 ## Milestone 6 — Deployment & Polish
 
-**Epics:** 11
-**Goal:** Install flow documented; system runnable by someone other than the author. Dashboard polish (mobile, advanced views).
+**Epics:** 10 (polish phase), 11
+**Goal:** Install flow documented; system runnable by someone other than the author. Dashboard polish (mobile layout, advanced views).
 
 - [ ] Mobile-optimized dashboard layout working
 - [ ] Install flow documented and tested
