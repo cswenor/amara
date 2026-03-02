@@ -7,10 +7,12 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 **Epics:** 0
 **Goal:** Resolve all boundary questions before a line of implementation code is written.
 
-- [ ] OpenClaw native capabilities audited
-- [ ] Gap analysis complete
+- [ ] Host platform evaluated and selected (OpenClaw — see Epic 0, Section 1.5)
+- [ ] OpenClaw capabilities matrix audited (native/partial/gap for all rows)
+- [ ] Gap analysis complete (P0/P1/P2 prioritized)
 - [ ] Component boundaries decided (plugin vs service vs external)
-- [ ] Runtime topology chosen
+- [ ] Runtime topology chosen (single-process, SQLite WAL queue)
+- [ ] NFRs, security constraints, and decision log documented
 - [ ] Exit criteria met → implementation unlocked
 
 ## Milestone 1 — Foundation

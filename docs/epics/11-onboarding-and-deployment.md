@@ -14,7 +14,7 @@ The install flow, account connection, and getting-started documentation. The goa
 ## Scope
 
 **In:**
-- Prerequisites documentation (Node version, OpenClaw, accounts needed)
+- Prerequisites documentation (Node.js 22+, OpenClaw Gateway, Google OAuth credentials, accounts needed)
 - Install steps (clone, install deps, configure)
 - Account connection flow for each channel
 - Environment variable / config file documentation
