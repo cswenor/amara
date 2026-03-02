@@ -90,7 +90,7 @@ Normalization layer that converts OpenClaw channel-specific events to a common A
 
 ### Dashboard (Epic 10)
 
-Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gateway's HTTP endpoint. Shows active, pending, and completed tasks plus audit log. Mobile-optimized.
+Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gateway's HTTP endpoint. Shows active, pending, and completed tasks plus audit log. Core dashboard in Milestone 1 for early visibility; mobile-optimized layout deferred to Milestone 6 polish.
 
 ## Data Flow (happy path)
 
