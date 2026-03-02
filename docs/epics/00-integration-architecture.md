@@ -443,6 +443,28 @@ Amara monitors all communications across all channels. The triage layer makes a 
 
 **Triage log:** All triage decisions (including autonomous actions) are logged to a `triage_log` table in Amara Task DB. This provides visibility into what Amara is doing autonomously. The Dashboard (Epic 10) surfaces triage activity alongside orchestrator tasks.
 
+### Channel Write Permissions
+
+**Visibility does not imply write permission.** Amara can read every channel she monitors, but sending messages into a channel requires explicit authorization. This prevents the failure mode where opening monitoring on all WhatsApp conversations causes Amara to start responding in every chat.
+
+**Permission model:**
+
+| Channel Mode | Read | Silent Actions (archive, label) | Send Messages |
+|---|---|---|---|
+| **Direct** | always | always | always — this is Amara's conversation channel |
+| **Monitored** (default) | always | always (triage layer) | **never** — unless explicitly authorized |
+| **Monitored + write grant** | always | always (triage layer) | only via orchestrator, only when user has granted permission |
+
+**How write permission is granted for monitored channels:**
+
+1. **Per-instruction** — user tells Amara via direct channel: "Reply to John in our group chat saying I'll be late." The orchestrator executes this as a task, sends the message in that specific conversation, and the grant expires after the task completes.
+2. **Standing rule** — user configures a persistent rule: "You can reply in the Family group chat when someone asks me a direct question." Stored in `~/.amara/config.yaml` under channel permissions. Orchestrator checks standing rules before sending.
+3. **Never implicit** — the triage layer never sends messages. All outbound messages in monitored channels go through the orchestrator pipeline with explicit authorization checks.
+
+**Default: safe.** Any channel not explicitly configured defaults to monitored mode with no write permission. Amara reads everything, speaks only where she's told she can.
+
+**Notification routing:** When Amara needs to flag something from a monitored channel (triage Level 4), the notification is sent to the user's **direct channel** or Dashboard — never injected into the monitored conversation itself.
+
 ### Error Path: Agent Failure
 
 ```
@@ -531,6 +553,7 @@ Amara monitors all communications across all channels. The triage layer makes a 
 | Webhook forgery | Attacker sends fake Gmail Pub/Sub notifications | Webhook endpoint requires `Authorization: Bearer {hooks.token}` or `X-OpenClaw-Token` header. Rate limiting: 20 failed auth attempts / 60s → 429. Production hardening: validate Google Pub/Sub push subscription OIDC JWT signature (issuer: `accounts.google.com`, audience: webhook URL) and enforce replay window (reject messages older than 5 minutes). |
 | Agent sandbox escape | Specialist agent breaks out of Docker container | OpenClaw sandbox blocks dangerous bind sources (`docker.sock`, `/etc`, `/proc`, `/sys`, `/dev`), supports seccomp/AppArmor profiles, capability dropping, and namespace isolation. |
 | Autonomous triage misclassification | Triage layer archives important email or takes wrong autonomous action | Triage confidence thresholds: Level 1 actions (archive, label, mark read) require high confidence (>0.95). Uncertain messages escalate to Level 2 (fast model) or Level 4 (flag human). Triage log provides audit trail. User can review and undo reversible actions (unarchive, remove label) via Dashboard; some actions like mark-as-read are not fully reversible. Initial deployment: conservative rules with gradual threshold tuning. |
+| Unauthorized outbound messages in monitored channels | Amara sends messages in monitored conversations without user authorization (e.g., bug in triage layer, misconfigured standing rule, prompt injection triggering a reply) | Triage layer has no outbound message capability — structurally cannot send. All outbound in monitored channels routes through orchestrator which checks write permission (D14). Per-instruction grants are single-use and expire after task completion. Standing rules stored in `~/.amara/config.yaml` with explicit channel + condition pairs. Default is no-write for all monitored channels. Audit log records every outbound message with grant type (per-instruction / standing-rule) and authorization source. |
 
 ### Secret Storage
 
@@ -597,6 +620,7 @@ Amara monitors all communications across all channels. The triage layer makes a 
 | D11 | Channel normalization approach | Thin Amara layer converting channel events to common envelope | OpenClaw middleware, per-channel adapters with no common format | Common envelope format enables channel-agnostic orchestration. Thin layer minimizes maintenance. OpenClaw handles transport; Amara handles semantics. | Must define and maintain the AmaraEvent schema. New channels require a normalization mapping. Envelope must be extensible for channel-specific metadata. Envelope includes `mode` field (`monitored` \| `direct`) set by channel binding configuration (D13). |
 | D12 | Memory architecture | Use OpenClaw native memory + Amara Task DB for task context | Custom memory system inspired by Hermes multi-level, replace OpenClaw memory entirely | OpenClaw's memory (SQLite + vector + FTS5) is capable. Amara's task-specific context lives in Task DB. No need to duplicate memory infrastructure. Incorporate Hermes insights (USER.md, SOUL.md layering) as future enhancement. | Two sources of context: OpenClaw memory (conversation) and Amara Task DB (task state). Orchestrator must query both. Future: consider adding USER.md-style profile for personalization. |
 | D13 | Two-mode architecture (passive monitoring + direct conversation) | Triage layer between normalization and orchestrator; two AmaraEvent modes (`monitored` and `direct`) | Single-pipeline (all messages through orchestrator), Separate monitoring service (out-of-process) | Amara must monitor ALL communications (full inbox, all WhatsApp conversations, full calendar) — not just messages addressed to her. Most messages (~90%+) need fast autonomous actions (archive spam, label, mark read), not full orchestrator pipeline. Single pipeline can't handle the throughput/latency requirements. Separate service adds deployment complexity unnecessarily for a single-process architecture. Triage layer in-process keeps latency low (<200ms) and shares access to config/state. | Must implement triage rules + tiny model. Must add `gmail.modify` OAuth scope. Triage log adds write volume to Task DB. Some autonomous actions are reversible (unarchive, remove label) but others may not be (mark as read loses the "unread" signal). Reversible actions should support undo via Dashboard. All actions require high-confidence thresholds regardless. Must define channel binding model (account-level monitoring vs thread-level direct). |
+| D14 | Channel write permissions | Visibility ≠ write permission. Monitored channels default to read-only. Outbound messages require explicit authorization (per-instruction grant or standing rule). Triage layer structurally cannot send messages. | Allow triage to auto-reply, Allow write in all monitored channels by default | Real-world failure mode: opening WhatsApp monitoring caused the agent to respond in every conversation. Monitored channels must be safe-by-default (read + silent actions only). User controls write access explicitly. Per-instruction grants are scoped to a single orchestrator task. Standing rules are persistent but audited. | Must implement authorization check in orchestrator outbound path. Must store standing rules in `~/.amara/config.yaml`. Must audit every outbound message with grant type. Notification routing: Amara never injects messages into monitored channels to notify the user — notifications go to the direct channel or Dashboard. |
 
 ## 11. Risks and Mitigations
 
@@ -614,6 +638,7 @@ Amara monitors all communications across all channels. The triage layer makes a 
 | R10 | Agent sessions accumulate memory without bounds | low | medium | 90-day retention policy (Section 9). OpenClaw memory has temporal decay. Monitor RSS via OTLP metric. |
 | R11 | Triage layer misclassifies important message as spam/noise | medium | high | Conservative initial thresholds (>0.95 confidence for destructive actions like archive). Triage log provides full audit trail. Dashboard surfaces triage activity for human review. Undo capability for autonomous actions where possible (unarchive, remove label). Start with rules-only triage, add model-based classification after confidence is established. |
 | R12 | Triage layer throughput bottleneck under high email volume | low | medium | Level 1 triage is rules-based (no model call), target <200ms. Batch processing for email inbox sync (historical messages). Monitor triage latency via OTLP. If bottleneck emerges, add message-level parallelism within triage layer. |
+| R13 | Amara sends unauthorized message in monitored channel | low | critical | Triage layer structurally cannot send messages (D14). Orchestrator checks write permission before every outbound in monitored channels. Per-instruction grants expire after task completion. Standing rules require explicit config. Default is no-write. Audit log records grant type for every outbound message. |
 
 ## 12. Exit Criteria
 
@@ -627,7 +652,7 @@ Epic 1 (and all other epics) may not begin until **all** of the following are tr
 - [x] Happy-path data flow is documented end-to-end (Section 7) — plus error and escalation paths
 - [x] Non-functional requirements have numeric targets (Section 8) — all rows filled
 - [x] Security and privacy constraints are written (Section 9) — OAuth scopes, secrets, PII, audit, deletion
-- [x] Decision log has at least one entry per major decision (Section 10) — 14 entries documented (D0–D13)
+- [x] Decision log has at least one entry per major decision (Section 10) — 15 entries documented (D0–D14)
 - [x] No open questions remain that could block Epic 1 design
 
 ### Downstream Epic Verification
@@ -638,10 +663,10 @@ Epic 1 (and all other epics) may not begin until **all** of the following are tr
 | Epic 2 (Security & Privacy) | What OAuth scopes? Where do secrets live? | Section 9, D9 |
 | Epic 3 (Observability) | What telemetry system? | Section 2 (native OTLP), Section 8 (metrics) |
 | Epic 4 (Agent Registry) | What format? Where does it live? | D10 (YAML+MD, file-based) |
-| Epic 5 (Orchestrator) | In-process or separate? How do agents communicate? What events reach the orchestrator? | D1 (in-process), D7 (structured protocol), D13 (only direct + escalated events) |
+| Epic 5 (Orchestrator) | In-process or separate? How do agents communicate? What events reach the orchestrator? How are outbound messages authorized? | D1 (in-process), D7 (structured protocol), D13 (only direct + escalated events), D14 (write permission check before outbound in monitored channels) |
 | Epic 6 (Recovery & HITL) | How does escalation work? | Section 7 (escalation path) |
 | Epic 7 (Channel Platform) | Use platform adapters or custom? How are channels bound (account vs thread)? | D4, D5, D6, D11 (platform + normalization), D13 (channel binding model) |
-| Epic 8 (Channel Integrations) | WhatsApp/Gmail/Calendar strategy? What envelope format? What triage actions need Gmail API? | D4, D5, D6, D11 (envelope + mode field), D13 (Gmail inbox management for triage) |
+| Epic 8 (Channel Integrations) | WhatsApp/Gmail/Calendar strategy? What envelope format? What triage actions need Gmail API? How are outbound writes authorized? | D4, D5, D6, D11 (envelope + mode field), D13 (Gmail inbox management for triage), D14 (write permission model for monitored channels) |
 | Epic 9 (Specialist Agents) | How are agents defined and routed? | D10, Section 4 (registry) |
 | Epic 10 (Dashboard) | Where does it run? | D8 (Canvas/A2UI) |
 | Epic 11 (Onboarding) | What runtime? What config? | D0 (Node.js/OpenClaw), Section 6 (data stores) |

@@ -108,6 +108,8 @@ YAML + markdown bundles that define each specialist agent — its model, tools, 
 
 Normalization layer that converts OpenClaw channel-specific events to a common AmaraEvent envelope format. The envelope includes a `mode` field (`monitored` | `direct`) determined by channel binding configuration. All channel implementations (Epic 8) sit on top of this, using OpenClaw's native adapters for transport. Channels are bound at account level for monitoring (full inbox, all conversations) with specific threads/addresses designated as direct-mode channels.
 
+**Write permissions:** Visibility does not imply write permission. Monitored channels default to read + silent actions only. Outbound messages in monitored channels require explicit authorization — either a per-instruction grant (one-time, expires after task) or a standing rule (persistent, stored in `~/.amara/config.yaml`). The triage layer structurally cannot send messages. See [D14](epics/00-integration-architecture.md#10-decision-log).
+
 ### Dashboard (Epic 10)
 
 Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gateway's HTTP endpoint. Shows active, pending, and completed tasks, triage activity feed (what Amara is doing autonomously), and audit log. Core dashboard in Milestone 1 for early visibility; mobile-optimized layout deferred to Milestone 6 polish.
@@ -160,7 +162,8 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
 - **Least-privilege OAuth** — minimum scopes per service (gmail.readonly + gmail.send + gmail.compose + gmail.modify, calendar.readonly + calendar.events, contacts.readonly)
 - **Secrets** — delegated to OpenClaw auth-profiles mechanism (`~/.openclaw/agents/{agentId}/agent/auth-profiles.json`), never logged
 - **PII retention** — 90-day auto-purge (30-day for triage log; OAuth tokens exempt), configurable
-- **Audit** — correlation-ID linked to OTLP traces
+- **Channel write control** — monitored channels are read-only by default; outbound messages require explicit user authorization (per-instruction or standing rule)
+- **Audit** — correlation-ID linked to OTLP traces; every outbound message in monitored channels logged with grant type
 - **Deletion** — `amara delete-my-data` purges all Amara-owned data
 
 See [Epic 0, Section 9](epics/00-integration-architecture.md#9-security-and-privacy-constraints) for full details.
@@ -178,3 +181,4 @@ All architectural decisions are recorded in [Epic 0, Decision Log](epics/00-inte
 | Agent registry format | File-based YAML + MD (D10) |
 | Dashboard hosting | OpenClaw Canvas/A2UI (D8) |
 | Two-mode architecture | Triage layer: monitored (passive) + direct (assistant) (D13) |
+| Channel write permissions | Monitored channels read-only by default; outbound requires explicit grant (D14) |
