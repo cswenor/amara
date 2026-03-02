@@ -14,7 +14,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Scope
 
 **In:**
-- WhatsApp adapter (Meta Cloud API or OpenClaw native — per Epic 0 decision)
+- WhatsApp adapter (OpenClaw native Baileys adapter — per Epic 0 decision D4)
 - Gmail adapter (Gmail API via OAuth)
 - Calendar adapter (Google Calendar API via OAuth)
 - Channel-specific message normalization (to/from platform format)
@@ -27,7 +27,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 
 ## Key Decisions
 
-- [ ] WhatsApp: use OpenClaw's existing adapter or build a new one?
+- [x] WhatsApp: use OpenClaw's existing Baileys adapter (Decision D4)
 - [ ] Gmail: polling vs. push (Pub/Sub watch)?
 - [ ] Calendar: which operations are in scope for v1? (read events, create, accept/decline invites?)
 - [ ] Message normalization: common envelope format or channel-specific?
@@ -76,6 +76,6 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 
 ## Open Questions
 
-- Does Amara handle WhatsApp via the existing OpenClaw plugin, or does she own her own adapter?
+- ~~Does Amara handle WhatsApp via the existing OpenClaw plugin, or does she own her own adapter?~~ **Resolved:** Use OpenClaw native adapter (D4)
 - Is Gmail polling acceptable for v1, or is Pub/Sub required for acceptable latency?
 - Which Calendar operations are in scope for the first release?
