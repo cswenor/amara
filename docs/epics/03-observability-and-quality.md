@@ -21,6 +21,8 @@ Wires in tracing, structured logging, agent outcome scoring, failure taxonomy, a
 - Failure taxonomy (classification of every failure mode)
 - Eval harness (replay task histories, compare outcomes)
 - Metrics definitions (latency, success rate, escalation rate, stall rate)
+- Triage decision metrics: triage latency (P95 <200ms), confidence scores, escalation rate (D13, Section 8)
+- `triage_log` as a data source for triage decision analysis and dashboard feeds
 
 **Out:**
 - Dashboard UI (Epic 10) — observability produces data; dashboard displays it
@@ -29,9 +31,8 @@ Wires in tracing, structured logging, agent outcome scoring, failure taxonomy, a
 
 ## Key Decisions
 
-- [ ] Log format: JSONL to file / stdout / structured logger library?
-- [ ] Trace context: OpenTelemetry, or a simpler correlation-ID approach?
-- [ ] Where are agent outcome scores stored? (same DB as tasks / separate table?)
+- [x] Log format and trace context: OTLP/OpenTelemetry — native to OpenClaw, not overkill (D0, Section 2 capabilities matrix)
+- [x] Where are agent outcome scores stored? Amara Task DB (`~/.amara/tasks.db`) alongside task records (D2)
 - [ ] Eval harness: what's the interface? (CLI? test runner? notebook?)
 - [ ] Failure taxonomy: who owns it and how is it extended?
 
@@ -66,11 +67,13 @@ Wires in tracing, structured logging, agent outcome scoring, failure taxonomy, a
 > Placeholder — to become GitHub issues.
 
 - [ ] Define structured logging standard
-- [ ] Implement correlation ID propagation
+- [ ] Implement OTLP/OpenTelemetry integration (native to OpenClaw — D0)
+- [ ] Implement correlation ID propagation (correlation_id on tasks links to OTLP traces)
 - [ ] Define and implement agent outcome scoring
 - [ ] Document failure taxonomy
 - [ ] Build eval harness
 - [ ] Define metrics and their collection points
+- [ ] Implement triage decision metrics (latency, confidence, escalation rate — D13, Section 8)
 
 ## Dependencies
 
@@ -79,6 +82,6 @@ Wires in tracing, structured logging, agent outcome scoring, failure taxonomy, a
 
 ## Open Questions
 
-- Is OpenTelemetry the right choice for a single-user personal assistant, or is it overkill?
+- ~~Is OpenTelemetry the right choice for a single-user personal assistant, or is it overkill?~~ **Resolved:** Not overkill — OTLP is native to OpenClaw; we get it for free (D0, Section 2)
 - Should evals be part of `node --test` or a separate command?
 - Who defines acceptable outcome score thresholds?

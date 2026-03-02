@@ -19,9 +19,11 @@ Establishes the security and privacy contracts for Amara before channels or depl
 - Secret storage approach (how tokens are stored, rotated, and scoped)
 - PII inventory (what user data Amara holds and why)
 - Data retention policy (how long data is kept)
-- Data deletion ("delete my data" must work)
+- Data deletion ("delete my data" must work — 7-step process per Epic 0, Section 9)
 - Audit log schema for security-sensitive events
 - Input validation and output sanitization contracts
+- Write permission audit logging — all outbound sends on monitored channels logged (D14)
+- Triage log PII handling — `triage_log` contains message snippets subject to 30-day retention (Epic 0, Section 9)
 
 **Out:**
 - Channel implementation (Epic 8)
@@ -31,11 +33,11 @@ Establishes the security and privacy contracts for Amara before channels or depl
 
 ## Key Decisions
 
-- [ ] Where are OAuth tokens stored? (OS keychain / encrypted file / secret manager)
-- [ ] Token rotation: manual trigger or automatic on expiry?
-- [ ] Which events go in the security audit log vs. the general audit log?
-- [ ] PII retention period: how long do message contents stay in the task DB?
-- [ ] What does "delete my data" delete, and from where?
+- [x] Where are OAuth tokens stored? OpenClaw auth-profiles at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json` (D9)
+- [x] Token rotation: OpenClaw auth-profiles fallback chain handles refresh; refresh failures alert human (D9, R9)
+- [x] Which events go in the security audit log vs. the general audit log? Same SQLite database, separate tables; security events include OAuth exchanges, token rotations, write permission grants (Epic 0, Section 9)
+- [x] PII retention period: 90-day auto-purge for task data, 30-day for `triage_log`, OAuth tokens exempt from purge (Epic 0, Section 9)
+- [x] What does "delete my data" delete? 7-step process covering tasks, triage_log, event_queue, audit logs, agent session data, cached credentials, and config (Epic 0, Section 9)
 
 ## Success Metrics
 
@@ -68,12 +70,13 @@ Establishes the security and privacy contracts for Amara before channels or depl
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Define OAuth scopes per channel
-- [ ] Implement secret storage
+- [ ] Define OAuth scopes per channel (scopes listed in Epic 0, Section 9)
+- [ ] Implement secret storage (delegates to OpenClaw auth-profiles — D9)
 - [ ] Write log-sanitization test (secrets must not appear in output)
-- [ ] Define PII inventory and retention policy
-- [ ] Implement data deletion path
+- [ ] Define PII inventory and retention policy (90-day tasks, 30-day triage_log — Section 9)
+- [ ] Implement delete-my-data 7-step process (Epic 0, Section 9)
 - [ ] Define and wire security audit log
+- [ ] Implement D14 write permission audit logging (all outbound sends on monitored channels)
 - [ ] Document input validation contracts
 
 ## Dependencies
@@ -83,6 +86,6 @@ Establishes the security and privacy contracts for Amara before channels or depl
 
 ## Open Questions
 
-- Do we use the OS keychain, or is a simple encrypted file acceptable for v1?
-- Is the security audit log a separate table or the same JSONL as the general audit log?
-- Does the PII retention clock start at task creation or task completion?
+- ~~Do we use the OS keychain, or is a simple encrypted file acceptable for v1?~~ **Resolved:** Neither — delegated to OpenClaw auth-profiles (D9)
+- ~~Is the security audit log a separate table or the same JSONL as the general audit log?~~ **Resolved:** Same database, separate tables (Epic 0, Section 9)
+- ~~Does the PII retention clock start at task creation or task completion?~~ **Resolved:** Clock starts at record creation; 90-day for tasks, 30-day for triage_log (Epic 0, Section 9)

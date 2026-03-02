@@ -20,6 +20,8 @@ The install flow, account connection, and getting-started documentation. The goa
 - Environment variable / config file documentation
 - Getting-started guide ("send your first message")
 - Troubleshooting guide (common failure modes)
+- Channel binding configuration docs (how to set channels as `direct` vs `monitored` — D13)
+- Standing rule (D14) configuration docs (how to grant write permissions on monitored channels)
 
 **Out:**
 - Hosted/cloud deployment (local only for v1)
@@ -66,6 +68,8 @@ The install flow, account connection, and getting-started documentation. The goa
 - [ ] Document WhatsApp account connection
 - [ ] Document Gmail account connection
 - [ ] Document Calendar account connection
+- [ ] Document channel binding configuration (direct vs monitored — D13)
+- [ ] Document standing rule configuration for write permissions (D14)
 - [ ] Write getting-started guide
 - [ ] Write troubleshooting guide
 - [ ] Test full install on a clean machine

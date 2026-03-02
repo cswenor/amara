@@ -19,6 +19,7 @@ Handles what happens when tasks stall, agents fail, or Amara genuinely needs a h
 - Human escalation (send a question to the human via the originating channel)
 - Retry-with-feedback (re-run agent with human answer appended to context)
 - Escalation message format and content standards
+- Triage Level 4 → human escalation intake (triage flags items it can't handle for human review — D13, Section 7)
 
 **Out:**
 - Initial task planning (Epic 5)
@@ -68,6 +69,7 @@ Handles what happens when tasks stall, agents fail, or Amara genuinely needs a h
 - [ ] Implement stall detection
 - [ ] Implement human escalation with question formatting
 - [ ] Implement retry-with-feedback
+- [ ] Implement triage Level 4 → human escalation path (D13, Section 7)
 - [ ] Write human-unblocks-task integration test
 - [ ] Add retry count limit and final-failure state
 
@@ -78,6 +80,6 @@ Handles what happens when tasks stall, agents fail, or Amara genuinely needs a h
 
 ## Open Questions
 
-- Should the scheduler be a cron job, a setInterval, or event-driven (e.g., on task update)?
+- Should the scheduler be a cron job, a setInterval, or event-driven (e.g., on task update)? *(Note: architecture.md describes the scheduler as heartbeat-driven)*
 - How does the human reply get correlated back to the task? (reply detection / explicit command?)
 - Is there a maximum number of retries before a task is permanently failed?
