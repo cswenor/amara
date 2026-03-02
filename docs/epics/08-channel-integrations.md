@@ -19,7 +19,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - Calendar integration: configure and test native `gog` Calendar CRUD (per D6) + Amara analysis layer
 - Channel-specific message normalization (to/from AmaraEvent envelope format per D11, including `mode` field per D13)
 - Channel binding configuration: which channels/threads are "direct" (to Amara) vs "monitored" (passive observation)
-- Channel write permission enforcement: monitored channels allow read + silent triage actions (archive, label) but no outbound messaging by default; sending requires explicit authorization (per-instruction or standing rule per D14)
+- Channel write permission enforcement: monitored channels allow read + silent triage actions (archive, label, mark read, draft) but no outbound messaging by default; sending requires explicit authorization (per-instruction or standing rule per D14)
 - Channel-specific auth flows: QR/pairing session for WhatsApp (Baileys), OAuth2 for Gmail/Calendar (via `gog auth`)
 
 **Out:**
@@ -33,13 +33,13 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - [x] Gmail: use native Pub/Sub push via `gog gmail watch serve` (Decision D5). OpenClaw supports full push-based Gmail with auto-renewal and Tailscale tunnel. No need for polling fallback. Gmail `gmail.modify` scope required for triage autonomous actions (archive, label, mark read) per D13.
 - [x] Calendar: v1 scope is read events + create/update events using native `gog calendar` CRUD (Decision D6). Invite management (accept/decline/RSVP) deferred to v2.
 - [x] Message normalization: common AmaraEvent envelope format (Decision D11). Thin normalization layer converts channel-specific events. Envelope includes `mode` field (`monitored` | `direct`) per D13.
-- [x] Channel write permissions: monitored channels are read-only by default; outbound messages require explicit user authorization via per-instruction grant or standing rule (Decision D14). Triage layer structurally cannot send messages.
+- [x] Channel write permissions: monitored channels allow read + silent triage actions (archive, label, mark read, draft) but no outbound messaging by default; sending requires explicit user authorization via per-instruction grant or standing rule (Decision D14). Triage layer structurally cannot send messages.
 - [ ] How are threading and reply context preserved across channels? (Deferred to Epic 7 design phase — does not block Epic 1 start. Must be resolved before normalization layer implementation.)
 
 ## Success Metrics
 
 - End-to-end test: WhatsApp message → Amara acknowledges → responds
-- End-to-end test: Gmail email → Amara triages (autonomous: archive/label, or escalate) → orchestrator drafts/sends reply (with D14 authorization)
+- End-to-end test: Gmail email → Amara triages (autonomous: archive/label/draft, or escalate) → orchestrator sends reply (with D14 authorization for monitored channels)
 - End-to-end test: Calendar event invite → Amara reads and reports
 - All three adapters pass platform test harness
 

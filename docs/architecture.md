@@ -182,4 +182,4 @@ All architectural decisions are recorded in [Epic 0, Decision Log](epics/00-inte
 | Agent registry format | File-based YAML + MD (D10) |
 | Dashboard hosting | OpenClaw Canvas/A2UI (D8) |
 | Two-mode architecture | Triage layer: monitored (passive) + direct (assistant) (D13) |
-| Channel write permissions | Monitored channels read-only by default; outbound requires explicit grant (D14) |
+| Channel write permissions | Monitored channels: read + silent triage actions, no outbound messaging by default; sending requires explicit grant (D14) |
