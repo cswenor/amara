@@ -163,7 +163,7 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
 - **Least-privilege OAuth** — minimum scopes per service (gmail.readonly + gmail.send + gmail.compose + gmail.modify, calendar.readonly + calendar.events, contacts.readonly)
 - **Secrets** — delegated to OpenClaw auth-profiles mechanism (`~/.openclaw/agents/{agentId}/agent/auth-profiles.json`), never logged
 - **PII retention** — 90-day auto-purge (30-day for triage log; OAuth tokens exempt), configurable
-- **Channel write control** — monitored channels allow read + silent triage actions (archive, label, draft) but no outbound messaging by default; sending requires explicit user authorization (per-instruction or standing rule)
+- **Channel write control** — monitored channels allow read + silent triage actions (archive, label, mark read, draft) but no outbound messaging by default; sending requires explicit user authorization (per-instruction or standing rule)
 - **Audit** — correlation-ID linked to OTLP traces; every outbound message in monitored channels logged with grant type
 - **Deletion** — `amara delete-my-data` purges all Amara-owned data
 
