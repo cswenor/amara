@@ -137,6 +137,7 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 
 | Gap | Proposed Owner | Downstream Epic | Notes |
 |---|---|---|---|
+| Triage layer (two-mode architecture) | Amara core | Epic 1, Epic 5 | Fast decision engine between normalization and orchestrator. Routes direct-mode messages straight to queue; evaluates monitored-mode messages on a spectrum (autonomous action → escalate). Must handle high throughput (hundreds of messages/day) with <200ms decision latency. See Section 7 for triage decision spectrum. |
 | Task state machine | Amara core | Epic 1 | SQLite-backed states: `pending → in_progress → blocked → complete \| failed`. OpenClaw has no task lifecycle concept. |
 | Follow-up / re-check scheduler | Amara core | Epic 1 | OpenClaw cron exists but is session-isolated. Need task-aware scheduling that re-checks in-progress tasks and re-queues stalled work. |
 | Cross-channel task-level idempotency | Amara core | Epic 1 | OpenClaw has message-level dedup (dual-layer: memory + persistent disk) per channel. Amara needs *task*-level dedup across channels — same request via WhatsApp and email must not create duplicate tasks. Requires semantic matching, not just message ID dedup. |
@@ -152,9 +153,10 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Multi-agent coordination | Amara core | Epic 5 | Parallel task execution, result aggregation, conflict resolution. OpenClaw `agentToAgent` is basic point-to-point. |
 | Human escalation loop | Amara core | Epic 6 | When blocked or ambiguous, route to human for decision. OpenClaw has no escalation concept. |
 | Gmail enhanced compose | Amara service | Epic 8 | `gog gmail send` provides text, HTML, reply-to, and draft support natively. Amara needs: attachment handling (beyond `--body-file`), template-based compose, batch operations. Build as thin wrapper over `gog`. |
+| Gmail message management (triage actions) | Amara service | Epic 8 | Triage layer needs `gmail.modify` scope to archive, label, and mark messages as read autonomously. `gog` provides send/compose but not inbox management. Amara must call Gmail API directly for modify operations (archive, add/remove labels, mark read/unread). |
 | Calendar event model | Amara service | Epic 8 | `gog` provides full CRUD (list/create/update with colors). v1 scope: conflict detection and scheduling suggestions. v2 scope: invite management, RSVP (requires direct Calendar API calls beyond `gog`). Build as analysis layer on top of native `gog` calendar data. |
-| Dashboard UI | Amara service | Epic 10 | Task visibility, audit log. Leverage OpenClaw Canvas/A2UI as the rendering surface. Core dashboard (task views, audit log) in Milestone 1 for early visibility. Mobile-optimized layout deferred to Milestone 6 polish. |
-| Channel adapter normalization | Amara core | Epic 7 | OpenClaw channels emit different event shapes. Amara needs a common envelope format for the orchestrator. |
+| Dashboard UI | Amara service | Epic 10 | Task visibility, audit log, triage activity feed. Leverage OpenClaw Canvas/A2UI as the rendering surface. Core dashboard (task views, audit log, triage log) in Milestone 1 for early visibility. Mobile-optimized layout deferred to Milestone 6 polish. |
+| Channel adapter normalization | Amara core | Epic 7 | OpenClaw channels emit different event shapes. Amara needs a common envelope format for the orchestrator. Channel binding config must support two modes: "monitor entire account" (monitored mode) vs "this thread is Amara's direct line" (direct mode). |
 | Cross-channel threading / reply context | Amara core | Epic 7, Epic 8 | How are reply chains and thread context preserved across channels in the AmaraEvent envelope? Each channel has different threading models (WhatsApp: quoted message, Gmail: thread ID, Telegram: reply_to_message_id). Must be resolved before normalization layer. |
 
 ### P2 — Enhancements
@@ -162,6 +164,7 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Gap | Proposed Owner | Downstream Epic | Notes |
 |---|---|---|---|
 | Task audit log | Amara core | Epic 3 | Append-only log of all task state transitions, agent actions, and human decisions. Feed into OTLP for correlation. |
+| Triage audit log | Amara core | Epic 3 | Append-only log of all triage decisions (autonomous actions, escalations, flags). Separate from task audit log due to higher volume. Stored in `triage_log` table in Amara Task DB. Surfaced in Dashboard. |
 | Custom webhook targets | Amara service | Epic 7 | OpenClaw handles Gmail Pub/Sub webhook lifecycle natively (auto-registration, 12h renewal, verification). Amara may need custom webhook endpoints for future non-Google push sources. Low priority. |
 
 ## 4. Boundary Decisions
@@ -170,8 +173,9 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 
 | Component | Location | Rationale |
 |---|---|---|
-| **Orchestrator** | Amara service (in-process OpenClaw tool plugin) | Must receive events with minimal latency. Running in-process avoids IPC overhead and uses OpenClaw's session management. Exposed as a tool plugin that the Gateway invokes on incoming events. |
-| **Task DB** | Separate SQLite database (Amara-owned) | OpenClaw's SQLite is for memory/vectors. Task state has different access patterns (transactional writes, status queries) and must be independently backupable. Co-located on disk, separate file. |
+| **Triage Layer** | Amara service (in-process, between normalization and event queue) | Must make fast decisions (<200ms) on high-volume monitored-mode messages. In-process avoids latency. Contains: Mode Router (direct vs monitored), Fast Triage (rules + tiny model), Action Engine (executes autonomous actions like archive/label). Triage decisions logged to `triage_log` table. |
+| **Orchestrator** | Amara service (in-process OpenClaw tool plugin) | Must receive events with minimal latency. Running in-process avoids IPC overhead and uses OpenClaw's session management. Exposed as a tool plugin that the Gateway invokes on incoming events. Only receives direct-mode events and escalated monitored-mode events (filtered by triage layer). |
+| **Task DB** | Separate SQLite database (Amara-owned) | OpenClaw's SQLite is for memory/vectors. Task state has different access patterns (transactional writes, status queries) and must be independently backupable. Co-located on disk, separate file. Also stores `triage_log` table for triage decision audit trail. |
 | **Agent registry** | Amara-owned file-based (YAML + markdown bundles) | OpenClaw's multi-agent routing is per-channel. Amara needs per-capability routing with model/tool/mandate definitions. File-based allows version control and hot-reload. |
 | **Channel adapters** | OpenClaw channel plugins + Amara normalization layer | Use OpenClaw's native channel plugins (Baileys, Telegram, etc.) for transport. Amara adds a thin normalization layer that converts channel-specific events to a common envelope format. |
 | **Dashboard** | Amara service leveraging OpenClaw Canvas/A2UI | Canvas provides the rendering surface (served via Gateway HTTP). Amara owns the UI logic, task views, and audit log display. No separate web server needed. |
@@ -188,7 +192,9 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | WhatsApp channel adapter | OpenClaw channel plugin | OpenClaw (existing) | n/a | done | Native Baileys adapter. Use as-is. |
 | Gmail enhanced tools | OpenClaw tool plugin | Amara | low | planned (Epic 8) | Thin wrapper over native `gog gmail` — adds attachment handling, template compose, batch operations. Core send/receive is native. |
 | Calendar analysis tools | OpenClaw tool plugin | Amara | medium | planned (Epic 8) | v1: conflict detection, scheduling suggestions on native `gog calendar` CRUD. v2: invite management, RSVP (requires direct Calendar API). |
+| Gmail message management | OpenClaw tool plugin | Amara | low | planned (Epic 8) | Thin wrapper over Gmail API for inbox management — archive, label, mark read/unread. Required by triage layer for autonomous actions. Uses `gmail.modify` scope. |
 | Normalization layer | Amara internal | Amara | low | planned (Epic 7) | Converts channel events to common envelope. Too Amara-specific to extract. |
+| Triage layer | Amara internal | Amara | low | planned (Epic 1, Epic 5) | Mode routing + fast triage + autonomous action engine. Core to Amara's two-mode architecture. Not extractable. |
 | Task state machine | Amara internal | Amara | low | planned (Epic 1) | Core to Amara's identity. Not extractable. |
 | Orchestrator | Amara internal | Amara | low | planned (Epic 5) | Amara's brain. Not extractable. |
 | Agent registry | Amara internal | Amara | medium | planned (Epic 4) | Could be extracted later as a general-purpose agent routing plugin. Keep internal for now. |
@@ -223,8 +229,26 @@ Single-process architecture. Amara runs as a set of tool plugins within the Open
 │                              │                                       │
 │                              ▼                                       │
 │  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                   Amara Triage Layer                          │   │
+│  │    ┌──────────────┐  ┌──────────────┐  ┌────────────────┐    │   │
+│  │    │  Mode Router  │  │ Fast Triage  │  │  Action Engine │    │   │
+│  │    │ (direct vs    │  │ (rules +     │  │  (archive,     │    │   │
+│  │    │  monitored)   │  │  tiny model) │  │   label, etc.) │    │   │
+│  │    └──────┬───────┘  └──────┬───────┘  └───────┬────────┘    │   │
+│  │           │                 │                   │             │   │
+│  │     direct│           monitored          autonomous           │   │
+│  │     (all) │           (90%+ handled)     actions              │   │
+│  └───────────┼─────────────────┼──────────────────┼─────────────┘   │
+│              │                 │                   │                  │
+│              │          ┌──────┘                   ▼                  │
+│              │          │ escalate        ┌────────────────────┐      │
+│              │          │ (~10%)         │  Channel Providers  │      │
+│              │          │               │  (outbound actions) │      │
+│              ▼          ▼                └────────────────────┘      │
+│  ┌──────────────────────────────────────────────────────────────┐   │
 │  │                   Amara Event Queue                           │   │
 │  │              (SQLite WAL, at-least-once)                      │   │
+│  │      (only escalated + direct mode events queued here)        │   │
 │  └──────────────────────────┬───────────────────────────────────┘   │
 │                              │                                       │
 │                              ▼                                       │
@@ -299,62 +323,125 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 | Store | Engine | Owner | Location | Purpose |
 |---|---|---|---|---|
 | OpenClaw Memory | SQLite + sqlite-vec + FTS5 | OpenClaw | `~/.openclaw/memory/` | Agent memory, conversation history, vector search |
-| Amara Task DB | SQLite (WAL mode) | Amara | `~/.amara/tasks.db` | Task state machine, event queue, audit log |
+| Amara Task DB | SQLite (WAL mode) | Amara | `~/.amara/tasks.db` | Task state machine, event queue, audit log, triage log |
 | Agent Registry | Filesystem (YAML + MD) | Amara | `~/.amara/agents/` | Agent definitions, routing hints, model configs |
 | Amara Config | Filesystem (YAML) | Amara | `~/.amara/config.yaml` | User preferences, channel configs, schedule configs |
 | OAuth Tokens | OpenClaw workspace | OpenClaw | `~/.openclaw/agents/{agentId}/agent/auth-profiles.json` | Google OAuth tokens, API keys (per-agent scoped). Fallback chain: agent-specific → main agent → legacy `auth.json`. |
 
 ## 7. Data and Control Flows
 
-### Happy Path: Inbound Message → Response
+Amara operates in two modes. **Direct mode** is for messages explicitly addressed to Amara (dedicated conversation thread, specific email address). **Monitored mode** is for passive observation of all communications (full inbox, all group chats). The triage layer routes between them.
+
+### Direct Mode: User → Amara → Response
+
+The user sends a message directly to Amara. All direct-mode messages enter the full orchestrator pipeline.
 
 ```
-1. [WhatsApp]  User sends message "Can you check my calendar for conflicts tomorrow?"
+1. [WhatsApp]  User sends message to Amara: "Check my calendar for conflicts tomorrow"
        │
        ▼
 2. [Gateway]   Baileys provider receives message, emits `chat` event
        │
        ▼
 3. [Normalize]  Amara normalization layer converts to AmaraEvent:
-                { channel: "whatsapp", sender: "user", text: "...", ts: 1709337600 }
+                { channel: "whatsapp", sender: "user", text: "...",
+                  mode: "direct", ts: 1709337600 }
        │
        ▼
-4. [Queue]     Event written to Amara Event Queue (SQLite WAL)
+4. [Triage]    Mode Router identifies direct-mode event
+                → Passes through to Event Queue (no triage filtering)
+       │
+       ▼
+5. [Queue]     Event written to Amara Event Queue (SQLite WAL)
                 Status: PENDING
        │
        ▼
-5. [Intake]    Orchestrator reads event from queue
+6. [Intake]    Orchestrator reads event from queue
                 → Sends immediate acknowledgment: "Checking your calendar now."
                 → Acknowledgment routed back through Gateway → WhatsApp
        │
        ▼
-6. [Planner]   Fast model classifies request:
+7. [Planner]   Fast model classifies request:
                 → Domain: calendar
                 → Action: read + analyze
                 → Agent: calendar-specialist (or generic-doer with calendar tools)
        │
        ▼
-7. [Task DB]   Task record created:
+8. [Task DB]   Task record created:
                 { id: "t_abc123", status: "in_progress", agent: "calendar",
                   input: { ... }, channel: "whatsapp", created: 1709337600 }
        │
        ▼
-8. [Delegate]  Orchestrator spawns specialist agent via OpenClaw sub-agent:
+9. [Delegate]  Orchestrator spawns specialist agent via OpenClaw sub-agent:
                 → Agent receives structured input (date range, conflict criteria)
                 → Agent invokes `gog` tool to read Calendar events
                 → Agent analyzes for conflicts
                 → Agent returns structured output: { conflicts: [...], summary: "..." }
        │
        ▼
-9. [Complete]  Orchestrator receives agent result:
+10. [Complete] Orchestrator receives agent result:
                 → Updates Task DB: status → "complete", result stored
                 → Composes user-facing response from structured output
                 → Event queue entry marked COMPLETE
        │
        ▼
-10. [Respond]  Response routed through Gateway → WhatsApp:
+11. [Respond]  Response routed through Gateway → WhatsApp:
                 "You have 2 conflicts tomorrow: [details]"
 ```
+
+### Monitored Mode: Passive Triage → Autonomous Action
+
+Amara monitors all communications across all channels. The triage layer makes a fast decision for each message. Most messages (~90%+) are handled autonomously without entering the orchestrator queue.
+
+```
+1. [Gmail]     New email arrives: "50% off electronics! Limited time offer"
+       │
+       ▼
+2. [Gateway]   Gmail Pub/Sub push delivers notification, `gog` fetches message
+       │
+       ▼
+3. [Normalize]  Amara normalization layer converts to AmaraEvent:
+                { channel: "gmail", sender: "promo@store.com", subject: "...",
+                  mode: "monitored", ts: 1709337600 }
+       │
+       ▼
+4. [Triage]    Fast Triage evaluates message (rules + tiny model, <200ms target):
+                → Classification: promotional/spam
+                → Confidence: high
+                → Decision: autonomous quick action
+       │
+       ▼
+5. [Action]    Action Engine executes autonomously:
+                → Archive email (gmail.modify)
+                → Apply label "Promotions" (gmail.modify)
+                → Log triage decision to Triage Log (SQLite)
+                → No orchestrator involvement, no task created
+```
+
+**Triage decision spectrum** (from lightest to heaviest):
+
+| Level | Decision | Example | Latency Target | Model |
+|---|---|---|---|---|
+| 1 | **Autonomous quick action** | Archive spam, mark read, label, note context | < 200 ms | Rules + tiny model |
+| 2 | **Autonomous deeper action** | Draft reply to routine email, summarize long thread, flag for later review | < 2 s | Fast model (same as planner) |
+| 3 | **Escalate to orchestrator** | Message needs planning, delegation, or multi-step work | < 1 s (queue write) | Fast model classifies as "needs orchestrator" |
+| 4 | **Flag for human** | Urgent, ambiguous, or high-stakes message requiring immediate human attention | < 500 ms | Rules (VIP sender list, keywords) + fast model |
+
+**Escalation from triage to orchestrator:**
+
+```
+1. [Triage]    Fast Triage evaluates WhatsApp group message:
+                "Hey, can someone review the Q2 budget draft by Friday?"
+                → Classification: action-required, addressed to user
+                → Decision: escalate to orchestrator
+       │
+       ▼
+2. [Queue]     Event written to Amara Event Queue with mode: "monitored"
+                → Enters the same orchestrator pipeline as direct-mode events
+                → Orchestrator handles planning, delegation, tracking
+```
+
+**Triage log:** All triage decisions (including autonomous actions) are logged to a `triage_log` table in Amara Task DB. This provides visibility into what Amara is doing autonomously. The Dashboard (Epic 10) surfaces triage activity alongside orchestrator tasks.
 
 ### Error Path: Agent Failure
 
@@ -405,15 +492,19 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 
 | Requirement | Target | Notes |
 |---|---|---|
-| Acknowledgment latency (P95) | < 1000 ms | Template response, no model invocation. Measured from event receipt to ack sent. |
+| Triage decision latency (P95) | < 200 ms | Level 1 (autonomous quick action): rules + tiny model. Must handle high throughput — hundreds of messages/day across all monitored channels. No full model invocation at this level. |
+| Triage escalation latency (P95) | < 1 s | Time from triage "escalate" decision to event written to orchestrator queue. Includes mode classification and queue write. |
+| Triage throughput | ≥ 500 messages/day | Sustained capacity for passive monitoring across all channels (email, WhatsApp, calendar). Burst handling for email inbox sync. |
+| Acknowledgment latency (P95) | < 1000 ms | Template response, no model invocation. Measured from event receipt to ack sent. Applies to direct-mode and escalated monitored-mode events only. |
 | Agent response latency (P95) | < 45 s | Includes model inference + tool calls. Interim status updates sent every 15s for long-running tasks. |
 | Task persistence durability | RPO = 0 for acknowledged tasks (process crash, OOM kill) | Once a task is acknowledged, it must survive process crash and OOM kill. SQLite WAL with `synchronous=FULL`. Note: RPO=0 under sudden power loss depends on hardware write-cache behavior (battery-backed caches honor fsync; consumer SSDs may not). For full durability, enable periodic backups of `~/.amara/tasks.db` via cron or backup script. |
+| Triage log durability | Best-effort | Triage decisions logged to `triage_log` table. Loss of individual triage log entries on crash is acceptable (autonomous actions already executed). Batch-write triage logs for efficiency. |
 | Availability target | ≥ 95% uptime | Single-user system. Planned maintenance acceptable with notification. No formal SLA. |
-| Max concurrent tasks | 10 | Orchestrator processes up to 10 tasks in parallel. Queue depth > 10 triggers backpressure (new tasks queued, not dropped). |
-| Event queue max depth | 100 | Beyond 100 queued events, system emits health warning via OTLP. Events are never dropped. |
+| Max concurrent tasks | 10 | Orchestrator processes up to 10 tasks in parallel. Queue depth > 10 triggers backpressure (new tasks queued, not dropped). Triage layer operates independently — not subject to this limit. |
+| Event queue max depth | 100 | Beyond 100 queued events, system emits health warning via OTLP. Events are never dropped. Only escalated + direct-mode events enter this queue (triage filters most monitored-mode events). |
 | Cold start time | < 10 s | Gateway + Amara plugins loaded and ready to receive messages. |
-| SQLite write throughput | ≥ 100 writes/s | Sufficient for task state transitions at expected load. WAL mode eliminates reader-writer contention. |
-| Memory footprint | < 512 MB RSS | Gateway + all Amara plugins. Excludes Docker sandbox containers. |
+| SQLite write throughput | ≥ 100 writes/s | Sufficient for task state transitions + triage log writes at expected load. WAL mode eliminates reader-writer contention. |
+| Memory footprint | < 512 MB RSS | Gateway + all Amara plugins + triage layer. Excludes Docker sandbox containers. |
 | Agent session isolation | Full | Each specialist agent runs in its own OpenClaw session with no shared mutable state. Communication only via structured I/O. |
 
 ## 9. Security and Privacy Constraints
@@ -422,7 +513,7 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 
 | Service | Scopes | Justification |
 |---|---|---|
-| Gmail | `gmail.readonly`, `gmail.send`, `gmail.compose` | Read inbound for triage; send messages directly; create/manage/send drafts. No `gmail.modify` (no label/archive manipulation in v1). |
+| Gmail | `gmail.readonly`, `gmail.send`, `gmail.compose`, `gmail.modify` | Read inbound for monitoring; send messages directly; create/manage/send drafts; archive, label, and mark read/unread for triage autonomous actions. `gmail.modify` required for passive monitoring mode (triage layer archives spam, applies labels, marks messages as read). |
 | Google Calendar | `calendar.readonly`, `calendar.events` | Read events for conflict detection; create/update events for scheduling. |
 | Google Contacts | `contacts.readonly` | Name resolution for sender identification. No write access. |
 
@@ -439,6 +530,7 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 | Stale token persistence | Revoked tokens remain cached and used | Auth-profile fallback chain checks validity on use. `auth-profiles.json` stores `expires_at`; refresh failures trigger human alert. |
 | Webhook forgery | Attacker sends fake Gmail Pub/Sub notifications | Webhook endpoint requires `Authorization: Bearer {hooks.token}` or `X-OpenClaw-Token` header. Rate limiting: 20 failed auth attempts / 60s → 429. Production hardening: validate Google Pub/Sub push subscription OIDC JWT signature (issuer: `accounts.google.com`, audience: webhook URL) and enforce replay window (reject messages older than 5 minutes). |
 | Agent sandbox escape | Specialist agent breaks out of Docker container | OpenClaw sandbox blocks dangerous bind sources (`docker.sock`, `/etc`, `/proc`, `/sys`, `/dev`), supports seccomp/AppArmor profiles, capability dropping, and namespace isolation. |
+| Autonomous triage misclassification | Triage layer archives important email or takes wrong autonomous action | Triage confidence thresholds: Level 1 actions (archive, label) require high confidence (>0.95). Uncertain messages escalate to Level 2 (fast model) or Level 4 (flag human). Triage log provides audit trail. User can review and undo autonomous actions via Dashboard. Initial deployment: conservative rules with gradual threshold tuning. |
 
 ### Secret Storage
 
@@ -456,23 +548,25 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 | Contact names | OpenClaw Memory DB | 90 days | Sender identification |
 | OAuth tokens | OpenClaw workspace | Until revoked (exempt from auto-purge) | API access — managed by OpenClaw auth-profiles lifecycle |
 | Agent outputs | Amara Task DB | 90 days | Result storage and review |
+| Triage decisions | Amara Task DB (`triage_log`) | 30 days | Audit trail for autonomous actions (archive, label, etc.). Shorter retention than tasks due to higher volume. |
 
-**Retention policy:** All user content data (messages, task records, contacts, agent outputs) older than 90 days is automatically purged. Configurable via `~/.amara/config.yaml`. **OAuth tokens are exempt** — they persist until explicitly revoked via `amara delete-my-data` or manual revocation, since purging them would break channel connectivity.
+**Retention policy:** All user content data (messages, task records, contacts, agent outputs) older than 90 days is automatically purged. Triage log entries purged after 30 days (higher volume, lower audit value). Configurable via `~/.amara/config.yaml`. **OAuth tokens are exempt** — they persist until explicitly revoked via `amara delete-my-data` or manual revocation, since purging them would break channel connectivity.
 
 ### Audit Logging
 
 - Every task state transition logged with: `timestamp`, `task_id`, `from_state`, `to_state`, `actor` (agent or human), `correlation_id`.
 - Every agent invocation logged with: `timestamp`, `task_id`, `agent_name`, `input_hash` (not raw input), `duration_ms`, `outcome` (success/failure).
+- Every triage decision logged with: `timestamp`, `channel`, `sender_hash`, `classification`, `action_taken`, `confidence`, `model_used` (rules/tiny/fast), `duration_ms`.
 - Human decisions (escalation responses, clarifications) logged with: `timestamp`, `task_id`, `decision`, `channel`.
 - All audit entries carry a `correlation_id` that links to OTLP trace spans.
-- **Raw message content is NOT logged in audit entries** — only metadata and hashes. Full content lives in OpenClaw Memory DB under retention policy.
+- **Raw message content is NOT logged in audit entries** — only metadata and hashes. Full content lives in OpenClaw Memory DB under retention policy. Triage log entries store `sender_hash` (not raw sender), `classification`, and `action_taken` — never raw message content.
 
 ### Data Deletion
 
 `amara delete-my-data` command performs:
 
 1. Emit confirmation via all connected channels ("Data deletion starting — you will lose access to Amara after this completes.")
-2. Purge all tables from Amara Task DB (`tasks`, `audit_log` tables)
+2. Purge all tables from Amara Task DB (`tasks`, `audit_log`, `triage_log` tables)
 3. Purge event queue table from Amara Task DB (`event_queue`, `amara_dlq` tables — same SQLite file, separate tables)
 4. Request OpenClaw purge Amara-tagged data from Memory DB (via OpenClaw's deletion API)
 5. Delete Amara config files
@@ -500,8 +594,9 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 | D8 | Dashboard hosting | OpenClaw Canvas/A2UI (served via Gateway) | Separate Express/Fastify server, static site, Electron app | Canvas provides agent-generated HTML served at Gateway's HTTP endpoint. No separate process, no CORS issues, no additional port. Mobile-friendly if properly designed. | Tied to Canvas API surface (relatively new feature). Limited to what A2UI can render. If Canvas proves too limiting, fall back to separate server (low migration cost). |
 | D9 | Secret management | Delegate to OpenClaw's existing auth-profiles mechanism | Vault, dotenv, OS keychain, custom encrypted store | OpenClaw handles OAuth tokens and API keys via `auth-profiles.json` per-agent with `SecretRef` indirection and fallback chain (agent → main → legacy). Amara adds no new secret types. OpenClaw has a built-in `openclaw security audit` CLI for checking filesystem permissions, sandbox config, and secret exposure. | Secrets at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json`. Must ensure directory permissions are correct (0700). Tokens stored in plaintext JSON — encrypt at rest is a future enhancement. No centralized secret rotation — manual process. |
 | D10 | Agent registry format | File-based YAML + markdown bundles (Amara-owned) | Database-backed, OpenClaw plugin registry, API-based | Version-controllable (git), human-readable, hot-reloadable (watch filesystem). Aligns with Hermes SKILL.md concept. No database dependency for agent definitions. | Must implement file watcher for hot-reload. YAML parsing adds startup cost (negligible at expected scale). Schema validation needed to prevent malformed bundles. |
-| D11 | Channel normalization approach | Thin Amara layer converting channel events to common envelope | OpenClaw middleware, per-channel adapters with no common format | Common envelope format enables channel-agnostic orchestration. Thin layer minimizes maintenance. OpenClaw handles transport; Amara handles semantics. | Must define and maintain the AmaraEvent schema. New channels require a normalization mapping. Envelope must be extensible for channel-specific metadata. |
+| D11 | Channel normalization approach | Thin Amara layer converting channel events to common envelope | OpenClaw middleware, per-channel adapters with no common format | Common envelope format enables channel-agnostic orchestration. Thin layer minimizes maintenance. OpenClaw handles transport; Amara handles semantics. | Must define and maintain the AmaraEvent schema. New channels require a normalization mapping. Envelope must be extensible for channel-specific metadata. Envelope includes `mode` field (`monitored` \| `direct`) set by channel binding configuration (D13). |
 | D12 | Memory architecture | Use OpenClaw native memory + Amara Task DB for task context | Custom memory system inspired by Hermes multi-level, replace OpenClaw memory entirely | OpenClaw's memory (SQLite + vector + FTS5) is capable. Amara's task-specific context lives in Task DB. No need to duplicate memory infrastructure. Incorporate Hermes insights (USER.md, SOUL.md layering) as future enhancement. | Two sources of context: OpenClaw memory (conversation) and Amara Task DB (task state). Orchestrator must query both. Future: consider adding USER.md-style profile for personalization. |
+| D13 | Two-mode architecture (passive monitoring + direct conversation) | Triage layer between normalization and orchestrator; two AmaraEvent modes (`monitored` and `direct`) | Single-pipeline (all messages through orchestrator), Separate monitoring service (out-of-process) | Amara must monitor ALL communications (full inbox, all WhatsApp conversations, full calendar) — not just messages addressed to her. Most messages (~90%+) need fast autonomous actions (archive spam, label, mark read), not full orchestrator pipeline. Single pipeline can't handle the throughput/latency requirements. Separate service adds deployment complexity unnecessarily for a single-process architecture. Triage layer in-process keeps latency low (<200ms) and shares access to config/state. | Must implement triage rules + tiny model. Must add `gmail.modify` OAuth scope. Triage log adds write volume to Task DB. Autonomous actions are irreversible (archived email) — requires high-confidence thresholds. Must define channel binding model (account-level monitoring vs thread-level direct). |
 
 ## 11. Risks and Mitigations
 
@@ -517,6 +612,8 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 | R8 | Plugin isolation prevents cross-plugin state sharing | low | high | Amara uses its own SQLite DB for shared state (D2). Plugins communicate via structured I/O (D7), not shared memory. |
 | R9 | OAuth token refresh fails silently | medium | medium | Implement explicit refresh error handling in Gmail/Calendar tool plugins. Alert human via preferred channel if refresh fails. |
 | R10 | Agent sessions accumulate memory without bounds | low | medium | 90-day retention policy (Section 9). OpenClaw memory has temporal decay. Monitor RSS via OTLP metric. |
+| R11 | Triage layer misclassifies important message as spam/noise | medium | high | Conservative initial thresholds (>0.95 confidence for destructive actions like archive). Triage log provides full audit trail. Dashboard surfaces triage activity for human review. Undo capability for autonomous actions where possible (unarchive, remove label). Start with rules-only triage, add model-based classification after confidence is established. |
+| R12 | Triage layer throughput bottleneck under high email volume | low | medium | Level 1 triage is rules-based (no model call), target <200ms. Batch processing for email inbox sync (historical messages). Monitor triage latency via OTLP. If bottleneck emerges, add message-level parallelism within triage layer. |
 
 ## 12. Exit Criteria
 
@@ -530,20 +627,20 @@ Epic 1 (and all other epics) may not begin until **all** of the following are tr
 - [x] Happy-path data flow is documented end-to-end (Section 7) — plus error and escalation paths
 - [x] Non-functional requirements have numeric targets (Section 8) — all rows filled
 - [x] Security and privacy constraints are written (Section 9) — OAuth scopes, secrets, PII, audit, deletion
-- [x] Decision log has at least one entry per major decision (Section 10) — 13 entries documented (D0–D12)
+- [x] Decision log has at least one entry per major decision (Section 10) — 14 entries documented (D0–D13)
 - [x] No open questions remain that could block Epic 1 design
 
 ### Downstream Epic Verification
 
 | Epic | Key Question | Answered By |
 |---|---|---|
-| Epic 1 (Core Infrastructure) | What storage engine? What event delivery guarantee? | D2 (SQLite), D3 (WAL queue) |
+| Epic 1 (Core Infrastructure) | What storage engine? What event delivery guarantee? What does the triage layer do? | D2 (SQLite), D3 (WAL queue), D13 (two-mode architecture) |
 | Epic 2 (Security & Privacy) | What OAuth scopes? Where do secrets live? | Section 9, D9 |
 | Epic 3 (Observability) | What telemetry system? | Section 2 (native OTLP), Section 8 (metrics) |
 | Epic 4 (Agent Registry) | What format? Where does it live? | D10 (YAML+MD, file-based) |
-| Epic 5 (Orchestrator) | In-process or separate? How do agents communicate? | D1 (in-process), D7 (structured protocol) |
+| Epic 5 (Orchestrator) | In-process or separate? How do agents communicate? What events reach the orchestrator? | D1 (in-process), D7 (structured protocol), D13 (only direct + escalated events) |
 | Epic 6 (Recovery & HITL) | How does escalation work? | Section 7 (escalation path) |
-| Epic 7 (Channel Platform) | Use platform adapters or custom? | D4, D5, D6, D11 (platform + normalization) |
+| Epic 7 (Channel Platform) | Use platform adapters or custom? How are channels bound (account vs thread)? | D4, D5, D6, D11 (platform + normalization), D13 (channel binding model) |
 | Epic 8 (Channel Integrations) | WhatsApp/Gmail/Calendar strategy? | D4, D5, D6 |
 | Epic 9 (Specialist Agents) | How are agents defined and routed? | D10, Section 4 (registry) |
 | Epic 10 (Dashboard) | Where does it run? | D8 (Canvas/A2UI) |

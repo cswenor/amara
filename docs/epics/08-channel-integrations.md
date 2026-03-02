@@ -17,7 +17,8 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - WhatsApp integration: configure and test OpenClaw native Baileys adapter (per Epic 0 decision D4) + Amara normalization
 - Gmail integration: configure and test native `gog` Gmail (Pub/Sub push inbound, send/reply/draft outbound per D5) + Amara enhancement layer
 - Calendar integration: configure and test native `gog` Calendar CRUD (per D6) + Amara analysis layer
-- Channel-specific message normalization (to/from AmaraEvent envelope format per D11)
+- Channel-specific message normalization (to/from AmaraEvent envelope format per D11, including `mode` field per D13)
+- Channel binding configuration: which channels/threads are "direct" (to Amara) vs "monitored" (passive observation)
 - Channel-specific auth flows: QR/pairing session for WhatsApp (Baileys), OAuth2 for Gmail/Calendar (via `gog auth`)
 
 **Out:**
@@ -28,9 +29,9 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Key Decisions
 
 - [x] WhatsApp: use OpenClaw's existing Baileys adapter (Decision D4)
-- [x] Gmail: use native Pub/Sub push via `gog gmail watch serve` (Decision D5). OpenClaw supports full push-based Gmail with auto-renewal and Tailscale tunnel. No need for polling fallback.
+- [x] Gmail: use native Pub/Sub push via `gog gmail watch serve` (Decision D5). OpenClaw supports full push-based Gmail with auto-renewal and Tailscale tunnel. No need for polling fallback. Gmail `gmail.modify` scope required for triage autonomous actions (archive, label, mark read) per D13.
 - [x] Calendar: v1 scope is read events + create/update events using native `gog calendar` CRUD (Decision D6). Invite management (accept/decline/RSVP) deferred to v2.
-- [x] Message normalization: common AmaraEvent envelope format (Decision D11). Thin normalization layer converts channel-specific events.
+- [x] Message normalization: common AmaraEvent envelope format (Decision D11). Thin normalization layer converts channel-specific events. Envelope includes `mode` field (`monitored` | `direct`) per D13.
 - [ ] How are threading and reply context preserved across channels? (Deferred to Epic 7 design phase — does not block Epic 1 start. Must be resolved before normalization layer implementation.)
 
 ## Success Metrics
