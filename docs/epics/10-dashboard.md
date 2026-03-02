@@ -20,20 +20,22 @@ A minimal web UI for task visibility: active tasks, pending tasks, history, and 
 - Audit log view (filterable by date/type)
 - Task detail view (full lifecycle, notes, escalations)
 - Mobile-optimized layout
+- Triage activity feed (recent triage decisions from `triage_log` — D13)
+- Triage log browser (filterable by channel, mode, decision type)
+- Undo controls for reversible triage actions (D14 — archive, label, draft)
 
 **Out:**
 - Task creation via dashboard (input comes from channels)
 - Agent management via dashboard (future)
 - Multi-user auth (future)
-- Real-time push updates (future — polling acceptable for v1)
 
 ## Key Decisions
 
-- [ ] Framework: plain HTML/JS / React / SvelteKit / other?
-- [ ] Refresh model: polling interval or server-sent events?
-- [ ] Auth: localhost-only (no auth) / simple password / full auth?
-- [ ] Where does the dashboard server run? (same process as Amara / separate?)
-- [ ] Mobile breakpoint strategy
+- [x] Framework: OpenClaw Canvas/A2UI (D8)
+- [x] Refresh model: OpenClaw WebSocket push — not polling (Epic 0, Section 6)
+- [x] Auth: localhost-only, no auth for v1 (single-user personal assistant)
+- [x] Where does the dashboard server run? Same process — Gateway HTTP endpoint (D8)
+- [ ] Mobile breakpoint strategy (deferred to Milestone 6)
 
 ## Success Metrics
 
@@ -64,12 +66,14 @@ A minimal web UI for task visibility: active tasks, pending tasks, history, and 
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Choose framework and set up project
+- [ ] Set up Canvas/A2UI project (D8)
 - [ ] Implement active/pending/history views
 - [ ] Implement audit log view
-- [ ] Implement task detail view
+- [ ] Implement task detail view (including triage sub-task detail for visibility)
+- [ ] Implement triage activity feed (recent decisions from triage_log — D13)
+- [ ] Implement undo controls for reversible triage actions (D14)
 - [ ] Mobile layout pass
-- [ ] Dashboard server integration
+- [ ] Dashboard server integration (same-process Gateway endpoint — D8)
 
 ## Dependencies
 
@@ -78,6 +82,6 @@ A minimal web UI for task visibility: active tasks, pending tasks, history, and 
 
 ## Open Questions
 
-- Is localhost-only acceptable for v1 security, or do we need a token?
-- Polling interval: 5s? 10s? Configurable?
-- Does the dashboard need to show agent sub-task detail, or just top-level tasks?
+- ~~Is localhost-only acceptable for v1 security, or do we need a token?~~ **Resolved:** Localhost-only, no auth for v1 (single-user)
+- ~~Polling interval: 5s? 10s? Configurable?~~ **Resolved:** Not polling — OpenClaw WebSocket push (Section 6)
+- ~~Does the dashboard need to show agent sub-task detail, or just top-level tasks?~~ **Resolved:** Yes, sub-task detail needed for triage visibility (D13)

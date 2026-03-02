@@ -16,8 +16,11 @@ Establishes the foundational persistence and event layer that every other epic b
 **In:**
 - Task model and state transitions (`pending → in_progress → blocked → complete | failed`)
 - SQLite schema and migration strategy
-- Event bus (in-process or queue — type decided in Epic 0)
+- Event queue: SQLite WAL-mode queue with poll + mark-complete consumer (D3)
 - Basic task CRUD API usable by orchestrator (Epic 5) and agents (Epic 9)
+- Triage infrastructure: `triage_log` table for triage decision records (D13, Section 7)
+- Event reliability: `event_queue` table with at-least-once delivery (D3, Section 3 P0)
+- Dead-letter queue: `amara_dlq` table for poison messages (Section 3 P0)
 
 **Out:**
 - Orchestrator logic (Epic 5)
@@ -25,15 +28,14 @@ Establishes the foundational persistence and event layer that every other epic b
 - Channel adapters (Epics 7, 8)
 - Dashboard (Epic 10)
 - Auth / secret handling (Epic 2)
+- Triage decision logic (Epic 5) — this epic provides the tables, not the rules engine
 
 ## Key Decisions
 
-> To be resolved during Epic 0 or early in this epic.
-
-- [ ] SQLite file location and naming convention
-- [ ] WAL mode: enabled by default?
-- [ ] Event bus implementation (in-process `EventEmitter` / SQLite queue / other)
-- [ ] Task schema: what fields are required at creation vs. filled in later?
+- [x] SQLite file location: `~/.amara/tasks.db` (Epic 0, Section 6 — Data Stores)
+- [x] WAL mode: yes, enabled by default with `synchronous=FULL` for crash safety (D2, D3)
+- [x] Event bus implementation: SQLite WAL-mode queue with poll + mark-complete consumer — no in-process EventEmitter (D3)
+- [x] Task schema minimum fields: `task_id`, `state`, `channel`, `created_at`, `updated_at`, `correlation_id` (Epic 0, Section 6)
 - [ ] Migration tool: raw SQL files, a migration library, or hand-rolled?
 
 ## Success Metrics
@@ -65,10 +67,13 @@ Establishes the foundational persistence and event layer that every other epic b
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Define task schema
+- [ ] Define task schema (including `correlation_id` for OTLP trace linkage)
 - [ ] Implement SQLite setup and migration runner
 - [ ] Implement task state machine
-- [ ] Implement event bus
+- [ ] Implement event queue (SQLite WAL poll + mark-complete consumer, D3)
+- [ ] Define `triage_log` table schema (decision, confidence, latency, channel, mode — D13)
+- [ ] Define `event_queue` + `amara_dlq` tables (at-least-once delivery, poison message handling — D3)
+- [ ] Implement poison message detection and DLQ routing
 - [ ] Write crash-recovery test
 - [ ] Export and document task CRUD API
 
@@ -78,6 +83,6 @@ Establishes the foundational persistence and event layer that every other epic b
 
 ## Open Questions
 
-- What fields does a Task record need at minimum?
-- Should the event bus be synchronous or async?
-- Do we need soft-delete on tasks, or just a `failed`/`cancelled` state?
+- ~~What fields does a Task record need at minimum?~~ **Resolved:** `task_id`, `state`, `channel`, `created_at`, `updated_at`, `correlation_id` (Epic 0, Section 6)
+- ~~Should the event bus be synchronous or async?~~ **Resolved:** Async — SQLite WAL queue with poll consumer (D3)
+- ~~Do we need soft-delete on tasks, or just a `failed`/`cancelled` state?~~ **Resolved:** No soft-delete; use `failed` state for terminal failures (Epic 0, Section 7)

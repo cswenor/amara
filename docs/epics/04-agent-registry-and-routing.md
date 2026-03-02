@@ -14,11 +14,12 @@ Defines the agent definition format, implements the registry that loads and vali
 ## Scope
 
 **In:**
-- Agent bundle format (YAML metadata + markdown mandate)
+- Agent bundle format: YAML front-matter + markdown body, file-based (D10)
 - Registry implementation (load, validate, index)
 - Routing / matching logic
 - Three agent types: template (fixed prompt), role (persona + tools), generic doer (fallback)
 - Agent schema versioning
+- Structured I/O contract validation (P1 gap from Epic 0, Section 3)
 
 **Out:**
 - Specific agent implementations (Epic 9)
@@ -27,7 +28,7 @@ Defines the agent definition format, implements the registry that loads and vali
 
 ## Key Decisions
 
-- [ ] Bundle format: YAML front-matter + markdown body, or separate files?
+- [x] Bundle format: YAML front-matter + markdown body, file-based — loaded from disk at startup (D10)
 - [ ] How are agent capabilities declared? (tags, skill list, free-text, embedding?)
 - [ ] Routing algorithm: keyword match / embedding similarity / model-based classifier?
 - [ ] How are agents versioned? (semver in YAML / git tag?)
@@ -62,8 +63,9 @@ Defines the agent definition format, implements the registry that loads and vali
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Define agent bundle schema (YAML + markdown)
+- [ ] Define agent bundle schema (YAML front-matter + markdown body — D10)
 - [ ] Implement registry loader and validator
+- [ ] Implement schema validation for agent bundles (D10 consequence — reject malformed bundles)
 - [ ] Define three agent types
 - [ ] Implement routing / matching algorithm
 - [ ] Write routing tests

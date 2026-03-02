@@ -15,9 +15,11 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 
 **In:**
 - WhatsApp integration: configure and test OpenClaw native Baileys adapter (per Epic 0 decision D4) + Amara normalization
-- Gmail integration: configure and test native `gog` Gmail (Pub/Sub push inbound, send/reply/draft outbound per D5) + Amara enhancement layer
+- Gmail integration: configure and test native `gog` Gmail (Pub/Sub push inbound, send/reply/draft outbound per D5) + Amara enhancement layer + Gmail API wrapper for inbox management (archive, label, mark read/unread — required by triage layer per D13, uses `gmail.modify` scope)
 - Calendar integration: configure and test native `gog` Calendar CRUD (per D6) + Amara analysis layer
-- Channel-specific message normalization (to/from AmaraEvent envelope format per D11)
+- Channel-specific message normalization (to/from AmaraEvent envelope format per D11, including `mode` field per D13)
+- Channel binding configuration: which channels/threads are "direct" (to Amara) vs "monitored" (passive observation)
+- Channel write permission enforcement: monitored channels allow read + silent triage actions (archive, label, mark read, draft) but no outbound messaging by default; sending requires explicit authorization (per-instruction or standing rule per D14)
 - Channel-specific auth flows: QR/pairing session for WhatsApp (Baileys), OAuth2 for Gmail/Calendar (via `gog auth`)
 
 **Out:**
@@ -28,22 +30,23 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Key Decisions
 
 - [x] WhatsApp: use OpenClaw's existing Baileys adapter (Decision D4)
-- [x] Gmail: use native Pub/Sub push via `gog gmail watch serve` (Decision D5). OpenClaw supports full push-based Gmail with auto-renewal and Tailscale tunnel. No need for polling fallback.
+- [x] Gmail: use native Pub/Sub push via `gog gmail watch serve` (Decision D5). OpenClaw supports full push-based Gmail with auto-renewal and Tailscale tunnel. No need for polling fallback. Gmail `gmail.modify` scope required for triage autonomous actions (archive, label, mark read) per D13.
 - [x] Calendar: v1 scope is read events + create/update events using native `gog calendar` CRUD (Decision D6). Invite management (accept/decline/RSVP) deferred to v2.
-- [x] Message normalization: common AmaraEvent envelope format (Decision D11). Thin normalization layer converts channel-specific events.
+- [x] Message normalization: common AmaraEvent envelope format (Decision D11). Thin normalization layer converts channel-specific events. Envelope includes `mode` field (`monitored` | `direct`) per D13.
+- [x] Channel write permissions: monitored channels allow read + silent triage actions (archive, label, mark read, draft) but no outbound messaging by default; sending requires explicit user authorization via per-instruction grant or standing rule (Decision D14). Triage layer structurally cannot send messages.
 - [ ] How are threading and reply context preserved across channels? (Deferred to Epic 7 design phase — does not block Epic 1 start. Must be resolved before normalization layer implementation.)
 
 ## Success Metrics
 
 - End-to-end test: WhatsApp message → Amara acknowledges → responds
-- End-to-end test: Gmail email → Amara triages → drafts/sends reply
+- End-to-end test: Gmail email → Amara triages (autonomous: archive/label/draft, or escalate) → orchestrator sends reply (with D14 authorization for monitored channels)
 - End-to-end test: Calendar event invite → Amara reads and reports
 - All three adapters pass platform test harness
 
 ## Definition of Done
 
 - [ ] WhatsApp integration configured, tested end-to-end (native Baileys adapter + Amara normalization)
-- [ ] Gmail integration configured, tested end-to-end (native `gog` Pub/Sub push + Amara enhancement layer)
+- [ ] Gmail integration configured, tested end-to-end (native `gog` Pub/Sub push + Amara enhancement layer + Gmail inbox management wrapper for triage actions)
 - [ ] Calendar integration configured, tested end-to-end (native `gog` CRUD + Amara analysis layer)
 - [ ] All three pass platform test harness
 - [ ] Auth flows documented
@@ -65,10 +68,13 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 
 - [ ] Configure and test WhatsApp via native Baileys adapter + normalization
 - [ ] Configure and test Gmail via native `gog` (Pub/Sub push + send) + enhancement layer
+- [ ] Implement Gmail inbox management wrapper (archive, label, mark read/unread via Gmail API + `gmail.modify` scope — required by triage layer per D13)
 - [ ] Configure and test Calendar via native `gog` CRUD + analysis layer
+- [ ] Configure channel binding (direct vs monitored mode per D13)
+- [ ] Implement channel write permission enforcement in orchestrator outbound path (per-instruction + standing rule checks per D14)
 - [ ] Write end-to-end test per channel
 - [ ] Document auth flow per channel (QR/pairing for WhatsApp, OAuth2 for Gmail/Calendar)
-- [ ] Document message normalization (AmaraEvent envelope)
+- [ ] Document message normalization (AmaraEvent envelope with `mode` field)
 
 ## Dependencies
 

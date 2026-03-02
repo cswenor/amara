@@ -13,12 +13,16 @@ Defines the stable adapter contract that all channel integrations (Epic 8) must 
 ## Scope
 
 **In:**
-- Adapter interface definition (TypeScript types or JSDoc contracts)
+- Adapter interface definition (TypeScript — D0, OpenClaw is Node.js/TypeScript)
 - Auth/webhook lifecycle management (register, verify, renew)
 - Retry logic with backoff (outbound send failures)
 - Idempotency guarantees (inbound deduplication)
 - Error taxonomy for channel-level failures
 - Platform-level test harness (mock adapter for testing orchestrator + agents)
+- AmaraEvent envelope schema with `mode` field (`monitored | direct`) and channel metadata (D11, D13)
+- Channel binding configuration: which channels are `direct` vs `monitored` (D13)
+- `thread_ref` field for conversation threading context (open — not yet specified)
+- Write permission enforcement: outbound on monitored channels blocked unless grant exists (D14)
 
 **Out:**
 - Specific channel implementations (Epic 8)
@@ -26,8 +30,8 @@ Defines the stable adapter contract that all channel integrations (Epic 8) must 
 
 ## Key Decisions
 
-- [ ] Adapter interface: TypeScript interface / JSDoc / JSON schema?
-- [ ] How is inbound idempotency implemented? (message ID deduplication table?)
+- [x] Adapter interface: TypeScript — OpenClaw is Node.js/TypeScript (D0)
+- [ ] How is inbound idempotency implemented? (message ID deduplication table?) *(P0 gap: cross-channel task-level dedup — Epic 0, Section 3)*
 - [ ] Retry strategy: exponential backoff / fixed interval / channel-specific?
 - [ ] How are channel-level errors surfaced to the orchestrator?
 - [ ] Does the platform handle rate limiting, or is that per-adapter?
@@ -62,10 +66,14 @@ Defines the stable adapter contract that all channel integrations (Epic 8) must 
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Define adapter interface
+- [ ] Define adapter interface (TypeScript — D0)
+- [ ] Define AmaraEvent envelope schema with `mode` field (D11, D13)
+- [ ] Implement channel binding configuration (direct vs monitored per channel — D13)
+- [ ] Implement thread context resolution (`thread_ref` for conversation threading)
 - [ ] Define auth/webhook lifecycle
 - [ ] Implement retry logic
-- [ ] Implement inbound deduplication
+- [ ] Implement inbound deduplication (cross-channel task-level — P0 gap, Section 3)
+- [ ] Implement write permission enforcement on outbound (D14)
 - [ ] Document error taxonomy
 - [ ] Build mock adapter
 - [ ] Build platform test harness
@@ -77,6 +85,6 @@ Defines the stable adapter contract that all channel integrations (Epic 8) must 
 
 ## Open Questions
 
-- Should webhook registration be part of the platform or left to each adapter?
+- ~~Should webhook registration be part of the platform or left to each adapter?~~ **Resolved:** Platform-level — OpenClaw handles webhook lifecycle (D0, Section 2)
 - What is the minimal interface a "channel" must satisfy?
 - How does the platform signal to the orchestrator that a channel is temporarily unavailable?

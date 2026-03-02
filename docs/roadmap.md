@@ -22,10 +22,11 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 
 - [ ] SQLite task state machine operational
 - [ ] Event queue wired (SQLite WAL, at-least-once delivery)
-- [ ] OAuth/secret handling defined
+- [ ] Triage infrastructure (triage_log, event_queue, DLQ tables)
+- [ ] OAuth/secret handling defined (delegated to OpenClaw auth-profiles — D9)
 - [ ] Audit logging live
-- [ ] Trace and log pipeline running
-- [ ] Dashboard showing active/pending/history (via Canvas/A2UI)
+- [ ] Trace and log pipeline running (OTLP native via OpenClaw — D0)
+- [ ] Dashboard showing active/pending/history (via Canvas/A2UI — D8)
 - [ ] Audit log browsable in UI
 
 ## Milestone 2 — Agent Infrastructure
@@ -43,10 +44,12 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 **Epics:** 5, 6
 **Goal:** Amara can receive a request, plan it, delegate to an agent, track it, and recover from stalls.
 
-- [ ] Immediate acknowledgment on inbound
-- [ ] Task planning and delegation working end-to-end
+- [ ] Immediate acknowledgment on inbound (<1s — Section 8)
+- [ ] Task planning and delegation working end-to-end (via `agentToAgent` — D7)
+- [ ] Triage layer logic (rules engine + tiny model for monitored channels — D13)
+- [ ] D14 write permission authorization in orchestrator
 - [ ] Follow-up scheduler re-checking in-progress tasks
-- [ ] Human escalation path working
+- [ ] Human escalation path working (including triage Level 4 intake)
 - [ ] Retry-with-feedback working
 
 ## Milestone 4 — Channels
@@ -54,7 +57,9 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 **Epics:** 7, 8
 **Goal:** WhatsApp, Gmail, and Calendar connected through a stable adapter interface.
 
-- [ ] Channel adapter contract finalized
+- [ ] Channel adapter contract finalized (TypeScript, AmaraEvent envelope — D0, D11)
+- [ ] Channel binding configuration (direct vs monitored per channel — D13)
+- [ ] Write permission enforcement on outbound (D14)
 - [ ] Auth and webhook lifecycle handled
 - [ ] Retry and idempotency guarantees met
 - [ ] WhatsApp integration live
@@ -86,6 +91,7 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 
 Items not assigned to a milestone yet:
 
+- Triage model tuning (graduate from rules engine to ML classifier — D13)
 - User-authored recurring tasks (beyond core follow-up scheduler, which is P0 in Epic 1)
 - Sub-agent progress relay (real-time status)
 - Model-based routing (replace keyword heuristics)

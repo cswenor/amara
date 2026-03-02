@@ -19,8 +19,8 @@ Implements the specialist agents that Amara delegates to: Comms, Research, Codin
 - Coding agent (code generation, PR creation, debugging)
 - Writing agent (prose, docs, summaries)
 - Generic Doer (broad capability fallback)
-- Agent bundle files for each (YAML + markdown)
-- Structured input/output contracts per agent
+- Agent bundle files for each (YAML front-matter + markdown body — D10)
+- Structured input/output contracts per agent (using Amara structured protocol — D7)
 
 **Out:**
 - Agent routing (Epic 4)
@@ -32,7 +32,7 @@ Implements the specialist agents that Amara delegates to: Comms, Research, Codin
 - [ ] What model does each agent use? (cost vs. capability tradeoff)
 - [ ] What tools does each agent have access to? (web search / code interpreter / file system?)
 - [ ] Structured output format: JSON schema / TypeScript type / Zod?
-- [ ] How long can an agent run before it must return a partial result?
+- [x] How long can an agent run? <45s P95, with interim updates every 15s (Epic 0, Section 8)
 - [ ] How do agents handle "I can't do this"?
 
 ## Success Metrics
@@ -83,4 +83,4 @@ Implements the specialist agents that Amara delegates to: Comms, Research, Codin
 
 - Which model does each specialist agent use in v1?
 - Does the Coding agent have filesystem/shell access, or is it sandboxed?
-- Can an agent spawn sub-agents, or does it always return to the orchestrator?
+- ~~Can an agent spawn sub-agents, or does it always return to the orchestrator?~~ **Partially resolved:** Sub-agent spawning is supported by OpenClaw sessions (D0, Section 2); orchestrator coordinates via `agentToAgent` (D7)
