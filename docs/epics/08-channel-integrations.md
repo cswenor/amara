@@ -19,7 +19,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - Calendar integration: configure and test native `gog` Calendar CRUD (per D6) + Amara analysis layer
 - Channel-specific message normalization (to/from AmaraEvent envelope format per D11, including `mode` field per D13)
 - Channel binding configuration: which channels/threads are "direct" (to Amara) vs "monitored" (passive observation)
-- Channel write permission enforcement: monitored channels default to read-only; outbound requires explicit authorization (per-instruction or standing rule per D14)
+- Channel write permission enforcement: monitored channels allow read + silent triage actions (archive, label) but no outbound messaging by default; sending requires explicit authorization (per-instruction or standing rule per D14)
 - Channel-specific auth flows: QR/pairing session for WhatsApp (Baileys), OAuth2 for Gmail/Calendar (via `gog auth`)
 
 **Out:**
@@ -39,7 +39,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Success Metrics
 
 - End-to-end test: WhatsApp message → Amara acknowledges → responds
-- End-to-end test: Gmail email → Amara triages → drafts/sends reply
+- End-to-end test: Gmail email → Amara triages (autonomous: archive/label, or escalate) → orchestrator drafts/sends reply (with D14 authorization)
 - End-to-end test: Calendar event invite → Amara reads and reports
 - All three adapters pass platform test harness
 

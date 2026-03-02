@@ -84,7 +84,7 @@ The plugin host that provides channel adapters (WhatsApp via Baileys, Telegram, 
 The fast decision engine between normalization and orchestrator. Classifies every inbound event into one of two modes:
 
 - **Direct mode** — user is talking to Amara. All events pass through to the event queue and orchestrator.
-- **Monitored mode** — passive observation. The triage layer makes autonomous decisions: archive spam (<200ms, rules-based), draft replies (fast model), or escalate to orchestrator (~10% of monitored messages).
+- **Monitored mode** — passive observation. The triage layer makes autonomous silent actions: archive spam, label, mark read, draft replies (<200ms rules-based or <2s fast model). Triage never sends outbound messages. ~10% of monitored messages escalate to orchestrator.
 
 All triage decisions are logged to the `triage_log` table for Dashboard visibility and audit.
 
@@ -142,6 +142,7 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
    a. ~90%: Autonomous action (archive, label, mark read) → done, logged
    b. ~10%: Escalate to orchestrator → written to event queue
 5. Escalated events follow the same orchestrator pipeline as direct mode
+      (outbound messages in monitored channels require D14 write authorization)
 ```
 
 ## Non-Functional Requirements
@@ -162,7 +163,7 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
 - **Least-privilege OAuth** — minimum scopes per service (gmail.readonly + gmail.send + gmail.compose + gmail.modify, calendar.readonly + calendar.events, contacts.readonly)
 - **Secrets** — delegated to OpenClaw auth-profiles mechanism (`~/.openclaw/agents/{agentId}/agent/auth-profiles.json`), never logged
 - **PII retention** — 90-day auto-purge (30-day for triage log; OAuth tokens exempt), configurable
-- **Channel write control** — monitored channels are read-only by default; outbound messages require explicit user authorization (per-instruction or standing rule)
+- **Channel write control** — monitored channels allow read + silent triage actions (archive, label, draft) but no outbound messaging by default; sending requires explicit user authorization (per-instruction or standing rule)
 - **Audit** — correlation-ID linked to OTLP traces; every outbound message in monitored channels logged with grant type
 - **Deletion** — `amara delete-my-data` purges all Amara-owned data
 
