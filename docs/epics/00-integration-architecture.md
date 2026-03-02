@@ -187,7 +187,7 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 |---|---|---|---|---|---|
 | WhatsApp channel adapter | OpenClaw channel plugin | OpenClaw (existing) | n/a | done | Native Baileys adapter. Use as-is. |
 | Gmail enhanced tools | OpenClaw tool plugin | Amara | low | planned (Epic 8) | Thin wrapper over native `gog gmail` — adds attachment handling, template compose, batch operations. Core send/receive is native. |
-| Calendar analysis tools | OpenClaw tool plugin | Amara | medium | planned (Epic 8) | Analysis layer on native `gog calendar` — adds conflict detection, invite management, scheduling suggestions. Core CRUD is native. |
+| Calendar analysis tools | OpenClaw tool plugin | Amara | medium | planned (Epic 8) | v1: conflict detection, scheduling suggestions on native `gog calendar` CRUD. v2: invite management, RSVP (requires direct Calendar API). |
 | Normalization layer | Amara internal | Amara | low | planned (Epic 7) | Converts channel events to common envelope. Too Amara-specific to extract. |
 | Task state machine | Amara internal | Amara | low | planned (Epic 1) | Core to Amara's identity. Not extractable. |
 | Orchestrator | Amara internal | Amara | low | planned (Epic 5) | Amara's brain. Not extractable. |
