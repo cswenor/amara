@@ -31,7 +31,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - [x] Gmail: use native Pub/Sub push via `gog gmail watch serve` (Decision D5). OpenClaw supports full push-based Gmail with auto-renewal and Tailscale tunnel. No need for polling fallback.
 - [x] Calendar: v1 scope is read events + create/update events using native `gog calendar` CRUD (Decision D6). Invite management (accept/decline/RSVP) deferred to v2.
 - [x] Message normalization: common AmaraEvent envelope format (Decision D11). Thin normalization layer converts channel-specific events.
-- [ ] How are threading and reply context preserved across channels?
+- [ ] How are threading and reply context preserved across channels? (Deferred to Epic 7 design phase — does not block Epic 1 start. Must be resolved before normalization layer implementation.)
 
 ## Success Metrics
 
@@ -79,4 +79,4 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - ~~Does Amara handle WhatsApp via the existing OpenClaw plugin, or does she own her own adapter?~~ **Resolved:** Use OpenClaw native adapter (D4)
 - ~~Is Gmail polling acceptable for v1, or is Pub/Sub required for acceptable latency?~~ **Resolved:** Use native Pub/Sub push via `gog gmail watch serve` (D5). OpenClaw has full push infrastructure with auto-renewal and setup wizard.
 - ~~Which Calendar operations are in scope for the first release?~~ **Resolved:** Read events + create/update using native `gog calendar` CRUD (D6). Invite management deferred.
-- How are threading and reply context preserved across channels? (Unresolved — affects AmaraEvent envelope schema in D11. Owner: Epic 7/8. Must decide before normalization layer implementation.)
+- How are threading and reply context preserved across channels? (Deferred to Epic 7 design — does not block Epic 1. Must resolve before normalization layer. Each channel has different models: WhatsApp quoted messages, Gmail thread IDs, Telegram reply_to_message_id. AmaraEvent envelope needs a canonical `thread_ref` field.)

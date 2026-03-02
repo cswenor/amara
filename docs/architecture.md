@@ -113,7 +113,7 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
 |---|---|
 | Acknowledgment latency (P95) | < 1000 ms |
 | Agent response (P95) | < 45 s (with interim updates every 15s) |
-| Task persistence | RPO = 0 for acknowledged tasks |
+| Task persistence | RPO = 0 for acknowledged tasks (process crash/OOM; see [Epic 0 caveats](epics/00-integration-architecture.md#8-non-functional-requirements)) |
 | Availability | ≥ 95% uptime (no formal SLA) |
 | Concurrent tasks | Max 10 |
 | Memory footprint | < 512 MB RSS |
