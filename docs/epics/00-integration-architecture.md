@@ -31,24 +31,24 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 |---|---|---|---|
 | **Language/Runtime** | TypeScript / Node.js | Python 3.10+ (Node.js sidecar for WhatsApp) | OpenClaw is pure TS; Hermes needs polyglot runtime |
 | **WhatsApp** | native (Baileys) | native (Baileys via Node.js bridge) | Both use same Baileys library |
-| **Gmail inbound** | partial (`gog` skill + OAuth2 polling) | gap (no email channel) | OpenClaw advantage — polling via cron, not Pub/Sub |
-| **Gmail outbound** | partial (`gog` skill tool-based send) | gap | OpenClaw has send capability, but not full compose API |
-| **Calendar read** | partial (`gog` skill, Google Calendar API) | gap | OpenClaw advantage |
-| **Calendar write** | partial (`gog` skill) | gap | OpenClaw advantage |
+| **Gmail inbound** | native (Pub/Sub push via `gog gmail watch`) | gap (no email channel) | OpenClaw has full push-based Gmail integration with auto-renewal, Tailscale tunnel |
+| **Gmail outbound** | native (`gog gmail send` — text, HTML, drafts, reply) | gap | Full send/compose/reply/draft API via `gog` CLI |
+| **Calendar read** | native (`gog calendar events`) | gap | Full event listing with date range, color support |
+| **Calendar write** | native (`gog calendar create/update`) | gap | Create/update events with color IDs (1-11) |
 | **Telegram** | native | native | Parity |
 | **Discord** | native | native | Parity |
 | **Slack** | native | native | Parity |
 | **iMessage** | native (BlueBubbles) | gap | OpenClaw advantage |
 | **Signal** | native | gap | OpenClaw advantage |
 | **Google Chat / Teams / Matrix** | native | gap | OpenClaw advantage |
-| **Plugin system** | 4 types (channel/memory/tool/provider) | Skill documents (SKILL.md) + toolsets | OpenClaw more structured; Hermes more portable |
+| **Plugin system** | Modular registration API (channels, tools, hooks, commands, services, providers, HTTP routes) | Skill documents (SKILL.md) + toolsets | OpenClaw more structured with typed plugin SDK; Hermes more portable |
 | **Plugin ecosystem** | 13,700+ skills on ClawHub | 40+ bundled skills, agentskills.io standard | OpenClaw far larger ecosystem |
-| **Memory** | SQLite + sqlite-vec + FTS5, MEMORY.md | Multi-level (MEMORY.md + USER.md + SOUL.md + skills + Honcho) | Hermes more sophisticated layering |
+| **Memory** | SQLite + sqlite-vec + FTS5 + LanceDB (vector DB), MEMORY.md | Multi-level (MEMORY.md + USER.md + SOUL.md + skills + Honcho) | Both capable; Hermes has more structured layering; OpenClaw has dual backend (SQLite-vec + LanceDB) |
 | **Agent delegation** | Sub-agents + multi-agent routing | `delegate_task` spawns isolated subagents | OpenClaw more mature (explicit allowlisting) |
 | **Scheduling** | Cron + heartbeats (config-based) | Built-in cron (croniter library) | Parity |
 | **Observability** | Native OTLP via Diagnostic-OTel | Hook-based events + session logs + WandB | OpenClaw advantage — structured telemetry |
 | **Security/sandbox** | Docker per-session (network isolation, FS restrictions) | 5 backends (Local/Docker/SSH/Singularity/Modal) | Hermes more flexible; OpenClaw more integrated |
-| **Event bus** | RFC only (OpenClawBus #15016), JSON file events | Hook-based lifecycle events (not pub/sub) | Both gaps for true event bus |
+| **Event bus** | 27 plugin hook types + diagnostic event stream (federated, no centralized bus) | Hook-based lifecycle events (not pub/sub) | Both lack a centralized event bus; OpenClaw's hook system is comprehensive (session, message, tool, subagent, gateway lifecycle) |
 | **Canvas/UI** | A2UI (agent-generated HTML via Gateway) | CLI/TUI only | OpenClaw advantage |
 | **Model flexibility** | 13+ built-in providers + local inference | 4 backends (Nous/OpenRouter/OpenAI/custom) + litellm | OpenClaw broader native support |
 | **Maturity** | ~4 months (Nov 2025), 175K+ stars, 13.7K+ community skills | v0.1.0 (announced Feb 26, 2026), 1.4K stars | OpenClaw significantly more battle-tested |
@@ -58,8 +58,8 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 
 | # | Criterion | Weight | OpenClaw | Hermes Agent | Rationale |
 |---|---|---|---|---|---|
-| 1 | Channel coverage | High | **Strong** — 14+ native channels including Gmail, Calendar, iMessage | Weak — 4 channels, no email/calendar | Amara's core value prop is monitoring WhatsApp, Gmail, Calendar |
-| 2 | Plugin extensibility | High | **Strong** — 4 plugin types, 13.7K+ ecosystem | Good — SKILL.md standard, 40+ bundled | Amara needs specialist agents and custom tools |
+| 1 | Channel coverage | High | **Strong** — 8 core + 15+ extension channels including Gmail (Pub/Sub push), Calendar (full CRUD), iMessage | Weak — 4 channels, no email/calendar | Amara's core value prop is monitoring WhatsApp, Gmail, Calendar |
+| 2 | Plugin extensibility | High | **Strong** — modular plugin API (channels, tools, hooks, commands, services, providers), 13.7K+ ecosystem | Good — SKILL.md standard, 40+ bundled | Amara needs specialist agents and custom tools |
 | 3 | Maturity/stability | Medium | **Good** — more battle-tested, active community | Weak — v0.1.0, no formal releases | Production reliability for a personal assistant |
 | 4 | Memory system | Medium | Good — SQLite + vector hybrid | **Strong** — multi-level layered approach | Context persistence across sessions |
 | 5 | Observability | Medium | **Strong** — native OTLP | Adequate — hooks + logs | Debugging multi-agent system requires structured telemetry |
@@ -71,9 +71,9 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 
 **Primary reasons:**
 
-1. **Gmail and Calendar integration** (even if partial via `gog`) is critical for Amara's core value proposition. Hermes Agent has zero email or calendar support, which would require building from scratch.
+1. **Gmail and Calendar integration** is native — Gmail has full Pub/Sub push (`gog gmail watch`) with auto-renewal and `gog gmail send` for outbound; Calendar has full CRUD (`gog calendar events/create/update`). Hermes Agent has zero email or calendar support.
 2. **iMessage support** via BlueBubbles adds a high-value channel that Hermes lacks entirely.
-3. **Structured plugin system** (4 types: channel/memory/tool/provider) maps cleanly to Amara's specialist agent architecture.
+3. **Modular plugin system** (channels, tools, hooks, commands, services, providers, HTTP routes) with a typed SDK maps cleanly to Amara's specialist agent architecture.
 4. **OTLP observability** is table stakes for debugging a multi-agent system. OpenClaw ships this natively.
 5. **Larger ecosystem** (13,700+ ClawHub skills) provides ready-made tools that Amara can leverage.
 6. **Canvas/A2UI** can be leveraged for the Dashboard (Epic 10) without building a separate web server.
@@ -112,20 +112,21 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 |---|---|---|---|
 | WhatsApp inbound events | native | [OpenClaw docs — channels](https://docs.openclaw.ai/concepts/architecture), Baileys channel adapter | Gateway routes messages via Baileys provider; fires `chat` events |
 | WhatsApp outbound send | native | OpenClaw Gateway, Baileys provider | Agent replies routed through Gateway to WhatsApp |
-| Gmail inbound events | partial | `gog` skill, OAuth2, cron polling | Polling model via `openclaw cron add --schedule "0 */2 * * *"`; not Pub/Sub push. Latency bounded by poll interval. |
-| Gmail outbound send | partial | `gog` skill tool-based send | Tool invocation can send email, but not full compose API (no rich HTML, attachments limited) |
-| Calendar read | partial | `gog` skill, Google Calendar API via OAuth2 | Reads events and returns to agent. Can combine with cron for "morning briefing" pattern. |
-| Calendar write | partial | `gog` skill, Google Calendar API | Creates/updates events via API. No invite management or RSVP. |
-| Plugin-to-plugin event bus | gap | [OpenClawBus RFC #15016](https://github.com/openclaw/openclaw/discussions/15016) | RFC stage only. Current inter-agent: JSON files in `~/.clawdbot/events/` with schema validation. Not reliable for Amara's needs. |
-| Persistent storage | native | [SQLite + sqlite-vec](https://docs.openclaw.ai/concepts/memory) | Vector search (cosine via sqlite-vec, 70% weight) + keyword (FTS5 BM25, 30% weight) + MMR re-ranking + temporal decay |
-| Auth / secret management | native | OAuth2 via `gog`, API keys per-provider | Per-agent workspace scoping. Tokens stored in agent workspace directory. |
-| Webhook lifecycle (register, renew, verify) | partial | Gateway WebSocket events | Gateway emits events (`agent`, `chat`, `presence`, `health`, `heartbeat`, `cron`). Not a full webhook lifecycle manager — no auto-renewal or verification protocol. |
-| Retry / idempotency primitives | gap | Not documented in OpenClaw core | No built-in retry framework or message deduplication. Must be built by Amara. |
+| Gmail inbound events | native | `gog gmail watch serve` + Pub/Sub push, [`src/hooks/gmail-watcher.ts`](https://github.com/openclaw/openclaw/blob/main/src/hooks/gmail-watcher.ts) | Full Pub/Sub push: `gog gmail watch start` registers with Gmail API (auto-renews every 12h), `gog gmail watch serve` runs daemon on port 8788. Tailscale Funnel/Serve for public HTTPS endpoint. Auto-starts on Gateway boot when configured. |
+| Gmail outbound send | native | `gog gmail send`, [`skills/gog/SKILL.md`](https://github.com/openclaw/openclaw/blob/main/skills/gog/SKILL.md) | Full send API: `--body` (plain text), `--body-html` (HTML), `--body-file` (file/stdin), `--reply-to-message-id` (thread replies). Draft create/send via `gog gmail drafts create/send`. |
+| Calendar read | native | `gog calendar events`, [`skills/gog/SKILL.md`](https://github.com/openclaw/openclaw/blob/main/skills/gog/SKILL.md) | `gog calendar events <calendarId> --from <iso> --to <iso>`. Full event listing with date ranges. |
+| Calendar write | native | `gog calendar create/update`, [`skills/gog/SKILL.md`](https://github.com/openclaw/openclaw/blob/main/skills/gog/SKILL.md) | `gog calendar create` with `--summary`, `--from`, `--to`, `--event-color` (11 color IDs). `gog calendar update` for modifications. No invite management or RSVP (Amara gap). |
+| Plugin hook event system | native | [`src/plugins/types.ts`](https://github.com/openclaw/openclaw/blob/main/src/plugins/types.ts) | 27 hook types: `message_received`, `message_sending`, `message_sent`, `session_start/end`, `before/after_tool_call`, `subagent_spawning/spawned/ended`, `gateway_start/stop`, `llm_input/output`, etc. Priority-based ordering. No centralized event bus (OpenClawBus RFC #15016 still RFC). |
+| Persistent storage | native | [`extensions/memory-core/`](https://github.com/openclaw/openclaw/tree/main/extensions/memory-core), [`extensions/memory-lancedb/`](https://github.com/openclaw/openclaw/tree/main/extensions/memory-lancedb) | Dual backend: SQLite + sqlite-vec (cosine vector search + FTS5 BM25 keyword) and LanceDB (OpenAI embeddings). Auto-capture on messages, auto-recall on context. |
+| Auth / secret management | native | [`src/agents/auth-profiles/`](https://github.com/openclaw/openclaw/tree/main/src/agents/auth-profiles) | Per-agent workspace scoping. Tokens stored at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json`. Supports `SecretRef` indirection. Legacy `auth.json` auto-migrated. Fallback chain: agent-specific → main agent → legacy. |
+| Webhook lifecycle (register, renew, verify) | native | [`src/hooks/gmail-watcher.ts`](https://github.com/openclaw/openclaw/blob/main/src/hooks/gmail-watcher.ts), [`src/gateway/hooks.ts`](https://github.com/openclaw/openclaw/blob/main/src/gateway/hooks.ts) | Gmail: auto-registration via `gog gmail watch start`, auto-renewal every 12h, verification via `X-Gog-Token` header. Gateway hooks: webhook endpoint at `/hooks/*` with template-based routing, auth (Bearer/X-OpenClaw-Token), rate limiting (20 failed/60s → 429). |
+| Retry primitives | native | [`src/infra/retry.ts`](https://github.com/openclaw/openclaw/blob/main/src/infra/retry.ts), [`src/infra/backoff.ts`](https://github.com/openclaw/openclaw/blob/main/src/infra/backoff.ts) | Exponential backoff with jitter, configurable attempts/min/max delay. Per-channel tuning (Discord: 3 attempts 500-30000ms; Telegram: 3 attempts 400-30000ms + `retry_after` extraction). Circuit breaker for Telegram 401s (suspends after 10 consecutive failures). |
+| Deduplication / idempotency | native | [`src/infra/dedupe.ts`](https://github.com/openclaw/openclaw/blob/main/src/infra/dedupe.ts), [`src/plugin-sdk/persistent-dedupe.ts`](https://github.com/openclaw/openclaw/blob/main/src/plugin-sdk/persistent-dedupe.ts) | Dual-layer: in-memory (TTL + LRU, 20-min TTL, 5000 entries for web inbound) + persistent disk (file-locked JSON with exponential backoff locking). Inflight promise deduplication. Used for WhatsApp, Discord, Feishu webhooks. **Amara still needs cross-channel task-level dedup** (same request via WhatsApp + email → single task). |
 | Logging / observability | native | [Diagnostic-OTel plugin](https://signoz.io/blog/monitoring-openclaw-with-opentelemetry/) | OTLP traces (model usage, webhook processing), metrics (token usage, cost, context size, queue depth), logs. Routes to any OTLP backend. |
-| Agent delegation / sub-agents | native | [Multi-agent routing docs](https://docs.openclaw.ai/concepts/multi-agent) | Sub-agents (background workers) + multi-agent routing (isolated workspaces). Inter-agent messaging requires explicit `tools.agentToAgent` allowlisting. |
-| Scheduling (cron / heartbeats) | native | OpenClaw cron system | Standard cron syntax + heartbeat events. Each cron job runs in isolated session. |
-| Canvas / A2UI | native | OpenClaw Canvas feature | Agent-generated HTML served via Gateway at `/__openclaw__/canvas/`. Interactive UI surfaces. |
-| Docker sandboxing | native | [Docker sandboxing docs](https://docs.openclaw.ai/gateway/sandboxing) | Per-session containers. Network: none by default. Blocked bind sources (docker.sock, /etc, /proc). Modes: off/non-main/all. |
+| Agent delegation / sub-agents | native | [`src/agents/subagent-spawn.ts`](https://github.com/openclaw/openclaw/blob/main/src/agents/subagent-spawn.ts), [`src/agents/tools/sessions-spawn-tool.ts`](https://github.com/openclaw/openclaw/blob/main/src/agents/tools/sessions-spawn-tool.ts) | Hierarchical spawning: `runtime="subagent"` (direct) or `runtime="acp"`. Modes: `run` (one-shot) or `session` (persistent). Max spawn depth configurable. Workspace isolation, sandbox mode inheritance. Session visibility clamped to `spawned` by default. Inter-agent messaging requires explicit `tools.agentToAgent` allowlisting. |
+| Scheduling (cron / heartbeats) | native | [`src/cron/service.ts`](https://github.com/openclaw/openclaw/blob/main/src/cron/service.ts), [`src/cron/types.ts`](https://github.com/openclaw/openclaw/blob/main/src/cron/types.ts) | Three schedule types: `at` (one-time), `every` (interval), `cron` (expression with timezone). Two execution modes: `systemEvent` (triggers as system message) or `agentTurn` (direct agent execution with model override). Delivery to any channel. Failure tracking with consecutive error count. Stagger windows to prevent thundering herd. |
+| Canvas / A2UI | native | [`src/canvas-host/`](https://github.com/openclaw/openclaw/tree/main/src/canvas-host), [`vendor/a2ui/`](https://github.com/openclaw/openclaw/tree/main/vendor/a2ui) | Agent-generated HTML served via Gateway. A2UI spec with Angular + Lit renderers. Cross-platform action bridge (iOS/Android/Web). Live reload in dev mode. File serving with range requests. |
+| Docker sandboxing | native | [`src/agents/sandbox/`](https://github.com/openclaw/openclaw/tree/main/src/agents/sandbox), `Dockerfile.sandbox` | Per-session containers (scope: session/agent/shared). Workspace access: none/ro/rw. Security: blocked bind sources (`docker.sock`, `/etc`, `/proc`, `/sys`, `/dev`), capability dropping, seccomp/AppArmor profiles, network isolation (bridge/none/custom). Resource limits: pids, memory, CPU, ulimits. |
 | Multi-provider LLM | native | [Model providers docs](https://docs.openclaw.ai/concepts/model-providers) | 13+ built-in (OpenAI, Anthropic, Gemini, OpenRouter, Groq, etc.) + local (Ollama, vLLM, LM Studio). Two API types: openai-completions, anthropic-messages. |
 
 ## 3. Gap Analysis
@@ -138,8 +139,8 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 |---|---|---|---|
 | Task state machine | Amara core | Epic 1 | SQLite-backed states: `pending → in_progress → blocked → complete \| failed`. OpenClaw has no task lifecycle concept. |
 | Follow-up / re-check scheduler | Amara core | Epic 1 | OpenClaw cron exists but is session-isolated. Need task-aware scheduling that re-checks in-progress tasks and re-queues stalled work. |
-| Cross-channel idempotency | Amara core | Epic 1 | No deduplication across channels. Same request via WhatsApp and email must not create duplicate tasks. |
-| Event reliability (DB-backed queue) | Amara core | Epic 1 | OpenClaw events are fire-and-forget (no replay on gaps). Amara needs at-least-once delivery for task-critical events. SQLite WAL-mode queue. |
+| Cross-channel task-level idempotency | Amara core | Epic 1 | OpenClaw has message-level dedup (dual-layer: memory + persistent disk) per channel. Amara needs *task*-level dedup across channels — same request via WhatsApp and email must not create duplicate tasks. Requires semantic matching, not just message ID dedup. |
+| Event reliability (DB-backed queue) | Amara core | Epic 1 | OpenClaw plugin hooks are synchronous and don't provide replay on failure. Amara needs at-least-once delivery for task-critical events. SQLite WAL-mode queue with crash recovery. |
 
 ### P1 — Blocks Later Epics
 
@@ -150,8 +151,8 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Structured I/O contract | Amara core | Epic 4 | Agents need typed input/output schemas. OpenClaw agent communication is unstructured text. |
 | Multi-agent coordination | Amara core | Epic 5 | Parallel task execution, result aggregation, conflict resolution. OpenClaw `agentToAgent` is basic point-to-point. |
 | Human escalation loop | Amara core | Epic 6 | When blocked or ambiguous, route to human for decision. OpenClaw has no escalation concept. |
-| Gmail outbound compose | Amara service | Epic 8 | `gog` tool sends basic email. Amara needs: rich compose, thread-aware replies, attachment handling. Build as OpenClaw tool plugin wrapping Gmail API. |
-| Calendar event model | Amara service | Epic 8 | `gog` reads/writes events. Amara needs: invite management, RSVP, conflict detection, scheduling suggestions. Build as OpenClaw tool plugin. |
+| Gmail enhanced compose | Amara service | Epic 8 | `gog gmail send` provides text, HTML, reply-to, and draft support natively. Amara needs: attachment handling (beyond `--body-file`), template-based compose, batch operations. Build as thin wrapper over `gog`. |
+| Calendar event model | Amara service | Epic 8 | `gog` provides full CRUD (list/create/update with colors). Amara needs: invite management, RSVP, conflict detection, scheduling suggestions. Build as analysis layer on top of native `gog` calendar data. |
 | Dashboard UI | Amara service | Epic 10 | Task visibility, audit log, mobile-optimized. Leverage OpenClaw Canvas/A2UI as the rendering surface. |
 | Channel adapter normalization | Amara core | Epic 7 | OpenClaw channels emit different event shapes. Amara needs a common envelope format for the orchestrator. |
 
@@ -160,7 +161,7 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Gap | Proposed Owner | Downstream Epic | Notes |
 |---|---|---|---|
 | Task audit log | Amara core | Epic 3 | Append-only log of all task state transitions, agent actions, and human decisions. Feed into OTLP for correlation. |
-| Webhook lifecycle management | Amara service | Epic 7 | Auto-registration, renewal, and verification for push-based channels. Not needed for v1 (polling is acceptable). |
+| Custom webhook targets | Amara service | Epic 7 | OpenClaw handles Gmail Pub/Sub webhook lifecycle natively (auto-registration, 12h renewal, verification). Amara may need custom webhook endpoints for future non-Google push sources. Low priority. |
 
 ## 4. Boundary Decisions
 
@@ -184,8 +185,8 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Component | Type | Owner | Extraction Cost | Status | Notes |
 |---|---|---|---|---|---|
 | WhatsApp channel adapter | OpenClaw channel plugin | OpenClaw (existing) | n/a | done | Native Baileys adapter. Use as-is. |
-| Gmail channel adapter | OpenClaw tool plugin | Amara | medium | planned (Epic 8) | Wraps `gog` skill with enhanced compose, thread-aware replies, Pub/Sub upgrade path. |
-| Calendar tool | OpenClaw tool plugin | Amara | medium | planned (Epic 8) | Wraps `gog` skill with event model, invite management, conflict detection. |
+| Gmail enhanced tools | OpenClaw tool plugin | Amara | low | planned (Epic 8) | Thin wrapper over native `gog gmail` — adds attachment handling, template compose, batch operations. Core send/receive is native. |
+| Calendar analysis tools | OpenClaw tool plugin | Amara | medium | planned (Epic 8) | Analysis layer on native `gog calendar` — adds conflict detection, invite management, scheduling suggestions. Core CRUD is native. |
 | Normalization layer | Amara internal | Amara | low | planned (Epic 7) | Converts channel events to common envelope. Too Amara-specific to extract. |
 | Task state machine | Amara internal | Amara | low | planned (Epic 1) | Core to Amara's identity. Not extractable. |
 | Orchestrator | Amara internal | Amara | low | planned (Epic 5) | Amara's brain. Not extractable. |
@@ -282,6 +283,16 @@ No external broker. Events flow through the **Amara Event Queue** — a SQLite W
 
 OpenClaw's native event system (WebSocket push) is used for real-time UI updates to the Dashboard. It is **not** used for task-critical event delivery.
 
+### Failure Containment
+
+Single-process means a crash in any plugin takes down the Gateway. Mitigations:
+
+- **Process supervisor:** Run Gateway under systemd/pm2 with automatic restart. SQLite WAL + event queue ensure no acknowledged work is lost across restarts.
+- **Event-loop blocking:** Long-running agent work must be delegated to OpenClaw sub-agent sessions (which run in separate contexts). The orchestrator's event loop must never block on agent execution.
+- **Poison messages:** Events that fail processing 3 times are moved to a dead-letter table (`amara_dlq`) with the error context. They do not block queue processing. A human alert is emitted via OTLP.
+- **Plugin crash isolation:** OpenClaw runs agent sessions in isolated contexts. A specialist agent crash does not take down the orchestrator — it surfaces as a task failure handled by the error path (Section 7).
+- **Circuit breaking:** If an external service (Gmail API, Calendar API) fails repeatedly, the orchestrator disables that channel's polling temporarily and emits a health warning. Re-enables after a configurable backoff (default: 5 minutes).
+
 ### Data Stores
 
 | Store | Engine | Owner | Location | Purpose |
@@ -290,7 +301,7 @@ OpenClaw's native event system (WebSocket push) is used for real-time UI updates
 | Amara Task DB | SQLite (WAL mode) | Amara | `~/.amara/tasks.db` | Task state machine, event queue, audit log |
 | Agent Registry | Filesystem (YAML + MD) | Amara | `~/.amara/agents/` | Agent definitions, routing hints, model configs |
 | Amara Config | Filesystem (YAML) | Amara | `~/.amara/config.yaml` | User preferences, channel configs, schedule configs |
-| OAuth Tokens | OpenClaw workspace | OpenClaw | `~/.openclaw/auth/` | Google OAuth tokens, API keys (per-agent scoped) |
+| OAuth Tokens | OpenClaw workspace | OpenClaw | `~/.openclaw/agents/{agentId}/agent/auth-profiles.json` | Google OAuth tokens, API keys (per-agent scoped). Fallback chain: agent-specific → main agent → legacy `auth.json`. |
 
 ## 7. Data and Control Flows
 
@@ -395,7 +406,7 @@ OpenClaw's native event system (WebSocket push) is used for real-time UI updates
 |---|---|---|
 | Acknowledgment latency (P95) | < 1000 ms | Template response, no model invocation. Measured from event receipt to ack sent. |
 | Agent response latency (P95) | < 45 s | Includes model inference + tool calls. Interim status updates sent every 15s for long-running tasks. |
-| Task persistence durability | RPO = 0 for acknowledged tasks | Once a task is acknowledged, it must survive process crash. SQLite WAL with synchronous=NORMAL. |
+| Task persistence durability | RPO = 0 for acknowledged tasks | Once a task is acknowledged, it must survive process crash and power loss. SQLite WAL with `synchronous=FULL` (required for RPO=0 under power-loss scenarios; NORMAL can lose recent commits). |
 | Availability target | ≥ 95% uptime | Single-user system. Planned maintenance acceptable with notification. No formal SLA. |
 | Max concurrent tasks | 10 | Orchestrator processes up to 10 tasks in parallel. Queue depth > 10 triggers backpressure (new tasks queued, not dropped). |
 | Event queue max depth | 100 | Beyond 100 queued events, system emits health warning via OTLP. Events are never dropped. |
@@ -416,9 +427,21 @@ OpenClaw's native event system (WebSocket push) is used for real-time UI updates
 
 **Principle:** Request the minimum scopes needed. Upgrade scopes only when a new feature requires it, with user re-authorization.
 
+### Threat Model
+
+| Threat | Attack Vector | Mitigation |
+|---|---|---|
+| OAuth CSRF | Attacker crafts malicious OAuth redirect to capture authorization code | Use `state` parameter with CSPRNG nonce; verify on callback. OpenClaw's `gog auth` handles this natively. |
+| Token theft from filesystem | Attacker reads `auth-profiles.json` from disk | Directory permissions 0700 on `~/.openclaw/`. `openclaw security audit` checks this automatically. Future: encrypt tokens at rest. |
+| Prompt injection via inbound messages | Attacker sends crafted WhatsApp/email message to manipulate agent behavior | OpenClaw wraps external content with safety boundaries by default (`allowUnsafeExternalContent: false`). Amara treats inbound messages as untrusted data, not instructions. |
+| Token exfiltration via agent output | Specialist agent inadvertently outputs OAuth tokens or API keys | Secrets are never injected into agent context. OTLP telemetry redacts sensitive text before export (OpenClaw `Diagnostic-OTel` plugin). |
+| Stale token persistence | Revoked tokens remain cached and used | Auth-profile fallback chain checks validity on use. `auth-profiles.json` stores `expires_at`; refresh failures trigger human alert. |
+| Webhook forgery | Attacker sends fake Gmail Pub/Sub notifications | Webhook endpoint requires `Authorization: Bearer {hooks.token}` or `X-OpenClaw-Token` header. Rate limiting: 20 failed auth attempts / 60s → 429. |
+| Agent sandbox escape | Specialist agent breaks out of Docker container | OpenClaw sandbox blocks dangerous bind sources (`docker.sock`, `/etc`, `/proc`, `/sys`, `/dev`), supports seccomp/AppArmor profiles, capability dropping, and namespace isolation. |
+
 ### Secret Storage
 
-- OAuth tokens and API keys stored in **OpenClaw's workspace directory** (`~/.openclaw/auth/`), scoped per-agent.
+- OAuth tokens and API keys stored in **OpenClaw's workspace directory** (`~/.openclaw/agents/{agentId}/agent/auth-profiles.json`), scoped per-agent. Supports `SecretRef` indirection for sensitive values.
 - Amara does not implement its own secret store — it delegates to OpenClaw's existing mechanism.
 - Secrets are **never** written to Task DB, audit log, or OTLP telemetry.
 - Environment variables (e.g., `OPENAI_API_KEY`) follow OpenClaw's existing model.
@@ -447,29 +470,34 @@ OpenClaw's native event system (WebSocket push) is used for real-time UI updates
 
 `amara delete-my-data` command performs:
 
-1. Purge all records from Amara Task DB
-2. Purge all records from Amara Event Queue
-3. Purge Amara agent outputs from OpenClaw Memory DB
-4. Revoke all OAuth tokens
+1. Emit confirmation via all connected channels ("Data deletion starting — you will lose access to Amara after this completes.")
+2. Purge all records from Amara Task DB
+3. Purge all records from Amara Event Queue
+4. Request OpenClaw purge Amara-tagged data from Memory DB (via OpenClaw's deletion API)
 5. Delete Amara config files
-6. Emit confirmation via all connected channels
+6. Revoke all OAuth tokens (done last — channels need tokens for step 1)
+7. Write local deletion receipt to `~/.amara/deletion-receipt.json` (timestamp, items purged)
 
-**Scope:** Deletes Amara-owned data only. OpenClaw's own data (memory DB, agent workspaces) follows OpenClaw's deletion mechanism.
+**Ownership boundaries:**
+- **Amara-owned** (steps 2, 3, 5): Amara directly deletes these.
+- **OpenClaw-delegated** (step 4): Amara requests deletion via OpenClaw API. If OpenClaw API is unavailable, log the request and retry on next startup.
+- **Credential revocation** (step 6): Amara revokes its own OAuth grants. OpenClaw's own API keys are managed by OpenClaw separately.
+- **Local fallback** (step 7): If channel confirmation (step 1) fails, the deletion receipt serves as proof of completion.
 
 ## 10. Decision Log
 
 | # | Decision | Chosen Option | Alternatives Considered | Rationale | Consequences |
 |---|---|---|---|---|---|
-| D0 | Host platform selection | OpenClaw | Hermes Agent, Moltworker, Nanobot, NanoClaw, memU, NullClaw/PicoClaw, Agent S3 | Gmail/Calendar integration (partial but exists), 14+ channels, structured plugin system, OTLP observability, mature ecosystem (175K+ stars, 13.7K+ skills), Canvas/A2UI for dashboard. See Section 1.5. | Locked to TypeScript/Node.js runtime. Must work within OpenClaw's plugin architecture. Governance risk if foundation transition stalls. |
+| D0 | Host platform selection | OpenClaw | Hermes Agent, Moltworker, Nanobot, NanoClaw, memU, NullClaw/PicoClaw, Agent S3 | Gmail/Calendar integration is native (Pub/Sub push, full CRUD), 8 core + 15+ extension channels, modular plugin API with typed SDK, native OTLP observability (17+ metrics), mature ecosystem (13.7K+ skills), Canvas/A2UI for dashboard. See Section 1.5. | Locked to TypeScript/Node.js runtime. Must work within OpenClaw's plugin architecture. Governance risk if foundation transition stalls. |
 | D1 | Orchestrator location | In-process OpenClaw tool plugin | Separate process, separate service | Minimal latency (no IPC), leverages OpenClaw session management, simplifies deployment (single process). | Tightly coupled to OpenClaw lifecycle. Process crash takes down orchestrator. Mitigated by SQLite persistence + restart recovery. |
 | D2 | Task storage engine | Separate SQLite database (Amara-owned) | OpenClaw's SQLite, PostgreSQL, external DB | Different access patterns from OpenClaw memory (transactional writes vs. vector search). Independent backup. SQLite is zero-config and co-located. No network dependency. | Two SQLite files on disk. Must manage separately from OpenClaw memory. WAL mode required for concurrent reads during writes. |
 | D3 | Event reliability mechanism | SQLite WAL-mode queue (DB-backed) | In-memory queue, Redis, external broker (RabbitMQ) | At-least-once delivery required for task-critical events. SQLite WAL provides crash recovery without external dependencies. In-memory loses events on crash. External broker is over-engineered for single-user. | Additional write overhead per event (~1ms). Queue table in Task DB. Must implement consumer logic (poll + mark complete). |
 | D4 | Channel strategy — WhatsApp | Use OpenClaw native Baileys adapter | Build custom adapter, use Meta Cloud API directly | Baileys adapter is battle-tested in OpenClaw. No reason to duplicate effort. Meta Cloud API requires business verification. | Dependent on Baileys library maintenance. No official WhatsApp support (Baileys reverse-engineers Web protocol). Acceptable risk for personal use. |
-| D5 | Channel strategy — Gmail | Wrap `gog` skill with Amara enhancements | Build from scratch with Gmail API, use IMAP | `gog` provides working OAuth2 flow and basic read/send. Amara adds: thread-aware replies, Pub/Sub upgrade path, rich compose. Avoids reimplementing OAuth. | Tied to `gog` skill's API surface. Must monitor for breaking changes. Polling latency acceptable for v1 (upgrade to Pub/Sub in v2). |
-| D6 | Channel strategy — Calendar | Wrap `gog` skill with Amara event model | Build from scratch with Google Calendar API | Same rationale as D5. `gog` provides working read/write. Amara adds: conflict detection, invite management, scheduling suggestions. | Same consequences as D5. Calendar operations are less latency-sensitive than email. |
+| D5 | Channel strategy — Gmail | Use native `gog` Gmail integration + thin Amara enhancement layer | Build from scratch with Gmail API, use IMAP | `gog` provides full-featured Gmail: Pub/Sub push inbound (`gog gmail watch serve`), send/reply/draft outbound (`gog gmail send`), OAuth2 with auth-profiles. Amara adds: attachment handling, template compose, batch operations. No need to reimplement OAuth or push infrastructure. | Tied to `gog` CLI's API surface. Must monitor for breaking changes. Gmail Pub/Sub requires GCP project setup + Tailscale or equivalent tunnel. |
+| D6 | Channel strategy — Calendar | Use native `gog` Calendar integration + Amara analysis layer | Build from scratch with Google Calendar API | `gog` provides full Calendar CRUD: list events with date ranges, create/update with color support. Amara adds: conflict detection, invite management, scheduling suggestions. These are analysis features on top of native data access. | Tied to `gog` CLI's API surface. Calendar color IDs are Google-specific (1-11). No invite/RSVP in `gog` — Amara must call Calendar API directly for those. |
 | D7 | Inter-agent communication protocol | OpenClaw `agentToAgent` transport + Amara structured protocol | Custom WebSocket protocol, shared SQLite table, filesystem | OpenClaw provides the transport (JSON with schema validation). Amara defines the contract: typed task assignments, result reports, status updates. Avoids building transport layer. | Must define and version the protocol schema. Agent-to-agent requires explicit allowlisting in OpenClaw config. |
 | D8 | Dashboard hosting | OpenClaw Canvas/A2UI (served via Gateway) | Separate Express/Fastify server, static site, Electron app | Canvas provides agent-generated HTML served at Gateway's HTTP endpoint. No separate process, no CORS issues, no additional port. Mobile-friendly if properly designed. | Tied to Canvas API surface (relatively new feature). Limited to what A2UI can render. If Canvas proves too limiting, fall back to separate server (low migration cost). |
-| D9 | Secret management | Delegate to OpenClaw's existing workspace mechanism | Vault, dotenv, OS keychain, custom encrypted store | OpenClaw already handles OAuth tokens and API keys per-agent. Amara adds no new secret types. Avoid duplicating secret storage. | Secrets scoped to OpenClaw workspace directory. Must ensure directory permissions are correct (0700). No centralized secret rotation — manual process. |
+| D9 | Secret management | Delegate to OpenClaw's existing auth-profiles mechanism | Vault, dotenv, OS keychain, custom encrypted store | OpenClaw handles OAuth tokens and API keys via `auth-profiles.json` per-agent with `SecretRef` indirection and fallback chain (agent → main → legacy). Amara adds no new secret types. OpenClaw has a built-in `openclaw security audit` CLI for checking filesystem permissions, sandbox config, and secret exposure. | Secrets at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json`. Must ensure directory permissions are correct (0700). Tokens stored in plaintext JSON — encrypt at rest is a future enhancement. No centralized secret rotation — manual process. |
 | D10 | Agent registry format | File-based YAML + markdown bundles (Amara-owned) | Database-backed, OpenClaw plugin registry, API-based | Version-controllable (git), human-readable, hot-reloadable (watch filesystem). Aligns with Hermes SKILL.md concept. No database dependency for agent definitions. | Must implement file watcher for hot-reload. YAML parsing adds startup cost (negligible at expected scale). Schema validation needed to prevent malformed bundles. |
 | D11 | Channel normalization approach | Thin Amara layer converting channel events to common envelope | OpenClaw middleware, per-channel adapters with no common format | Common envelope format enables channel-agnostic orchestration. Thin layer minimizes maintenance. OpenClaw handles transport; Amara handles semantics. | Must define and maintain the AmaraEvent schema. New channels require a normalization mapping. Envelope must be extensible for channel-specific metadata. |
 | D12 | Memory architecture | Use OpenClaw native memory + Amara Task DB for task context | Custom memory system inspired by Hermes multi-level, replace OpenClaw memory entirely | OpenClaw's memory (SQLite + vector + FTS5) is capable. Amara's task-specific context lives in Task DB. No need to duplicate memory infrastructure. Incorporate Hermes insights (USER.md, SOUL.md layering) as future enhancement. | Two sources of context: OpenClaw memory (conversation) and Amara Task DB (task state). Orchestrator must query both. Future: consider adding USER.md-style profile for personalization. |

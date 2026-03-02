@@ -64,7 +64,7 @@ Amara is a **manager, not a doer**. She runs on a fast model and coordinates spe
 
 ### OpenClaw (Host Platform)
 
-The plugin host that provides channel adapters (WhatsApp via Baileys, Telegram, Gmail/Calendar via `gog` skill, iMessage via BlueBubbles), webhook lifecycle, Docker sandboxing, OTLP observability, and the plugin SDK. Amara runs as a set of tool plugins within the OpenClaw Gateway process.
+The plugin host that provides channel adapters (WhatsApp via Baileys, Telegram, Gmail via `gog` with Pub/Sub push, Calendar via `gog` with full CRUD, iMessage via BlueBubbles, plus 15+ more), webhook lifecycle management, Docker sandboxing (per-session with security controls), OTLP observability (17+ metrics), and a modular plugin SDK (channels, tools, hooks, commands, services, providers). Amara runs as a set of tool plugins within the OpenClaw Gateway process.
 
 **Selected over** Hermes Agent, Moltworker, and others. See [Platform Selection rationale](epics/00-integration-architecture.md#15-platform-selection).
 
@@ -121,7 +121,7 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
 ## Security Summary
 
 - **Least-privilege OAuth** — minimum scopes per service (gmail.readonly + gmail.send, calendar.readonly + calendar.events)
-- **Secrets** — delegated to OpenClaw workspace mechanism, never logged
+- **Secrets** — delegated to OpenClaw auth-profiles mechanism (`~/.openclaw/agents/{agentId}/agent/auth-profiles.json`), never logged
 - **PII retention** — 90-day auto-purge, configurable
 - **Audit** — correlation-ID linked to OTLP traces
 - **Deletion** — `amara delete-my-data` purges all Amara-owned data

@@ -21,7 +21,7 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 **Goal:** Persistence, security contracts, and observability wiring in place before any feature work.
 
 - [ ] SQLite task state machine operational
-- [ ] Event bus wired
+- [ ] Event queue wired (SQLite WAL, at-least-once delivery)
 - [ ] OAuth/secret handling defined
 - [ ] Audit logging live
 - [ ] Trace and log pipeline running

@@ -28,7 +28,7 @@ The install flow, account connection, and getting-started documentation. The goa
 
 ## Key Decisions
 
-- [ ] Config format: `.env` / YAML file / config object in code?
+- [x] Config format: YAML at `~/.amara/config.yaml` (per Epic 0, Section 6 — Data Stores)
 - [ ] Is there an interactive setup wizard, or is it manual config?
 - [ ] Where are docs published? (repo README / GitHub Pages / separate site?)
 - [ ] What's the minimum viable first experience? (just WhatsApp, or all three channels?)

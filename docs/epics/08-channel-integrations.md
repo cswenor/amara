@@ -28,9 +28,9 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Key Decisions
 
 - [x] WhatsApp: use OpenClaw's existing Baileys adapter (Decision D4)
-- [ ] Gmail: polling vs. push (Pub/Sub watch)?
-- [ ] Calendar: which operations are in scope for v1? (read events, create, accept/decline invites?)
-- [ ] Message normalization: common envelope format or channel-specific?
+- [x] Gmail: use native Pub/Sub push via `gog gmail watch serve` (Decision D5). OpenClaw supports full push-based Gmail with auto-renewal and Tailscale tunnel. No need for polling fallback.
+- [x] Calendar: v1 scope is read events + create/update events using native `gog calendar` CRUD (Decision D6). Invite management (accept/decline/RSVP) deferred to v2.
+- [x] Message normalization: common AmaraEvent envelope format (Decision D11). Thin normalization layer converts channel-specific events.
 - [ ] How are threading and reply context preserved across channels?
 
 ## Success Metrics
@@ -54,7 +54,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 
 | Risk | Mitigation |
 |------|-----------|
-| Gmail Pub/Sub setup is complex | Fall back to polling for v1; upgrade later |
+| Gmail Pub/Sub setup is complex (GCP project + Tailscale tunnel) | OpenClaw provides `openclaw webhooks gmail setup` wizard that automates GCP setup, Pub/Sub topic/subscription creation, and Tailscale Funnel configuration |
 | WhatsApp API changes break adapter | Pin API version; monitor changelogs |
 | Calendar API quota limits | Cache reads; batch writes |
 | OAuth token refresh fails silently | Explicit refresh error handling; alert to human |
@@ -77,5 +77,5 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Open Questions
 
 - ~~Does Amara handle WhatsApp via the existing OpenClaw plugin, or does she own her own adapter?~~ **Resolved:** Use OpenClaw native adapter (D4)
-- Is Gmail polling acceptable for v1, or is Pub/Sub required for acceptable latency?
-- Which Calendar operations are in scope for the first release?
+- ~~Is Gmail polling acceptable for v1, or is Pub/Sub required for acceptable latency?~~ **Resolved:** Use native Pub/Sub push via `gog gmail watch serve` (D5). OpenClaw has full push infrastructure with auto-renewal and setup wizard.
+- ~~Which Calendar operations are in scope for the first release?~~ **Resolved:** Read events + create/update using native `gog calendar` CRUD (D6). Invite management deferred.
