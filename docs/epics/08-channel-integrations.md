@@ -14,11 +14,11 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Scope
 
 **In:**
-- WhatsApp adapter (OpenClaw native Baileys adapter — per Epic 0 decision D4)
-- Gmail adapter (Gmail API via OAuth)
-- Calendar adapter (Google Calendar API via OAuth)
-- Channel-specific message normalization (to/from platform format)
-- Channel-specific auth flows (OAuth for Gmail/Calendar; API key or webhook for WhatsApp)
+- WhatsApp integration: configure and test OpenClaw native Baileys adapter (per Epic 0 decision D4) + Amara normalization
+- Gmail integration: configure and test native `gog` Gmail (Pub/Sub push inbound, send/reply/draft outbound per D5) + Amara enhancement layer
+- Calendar integration: configure and test native `gog` Calendar CRUD (per D6) + Amara analysis layer
+- Channel-specific message normalization (to/from AmaraEvent envelope format per D11)
+- Channel-specific auth flows: QR/pairing session for WhatsApp (Baileys), OAuth2 for Gmail/Calendar (via `gog auth`)
 
 **Out:**
 - Adapter interface definition (Epic 7)
@@ -42,9 +42,9 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 
 ## Definition of Done
 
-- [ ] WhatsApp adapter implemented and tested
-- [ ] Gmail adapter implemented and tested
-- [ ] Calendar adapter implemented and tested
+- [ ] WhatsApp integration configured, tested end-to-end (native Baileys adapter + Amara normalization)
+- [ ] Gmail integration configured, tested end-to-end (native `gog` Pub/Sub push + Amara enhancement layer)
+- [ ] Calendar integration configured, tested end-to-end (native `gog` CRUD + Amara analysis layer)
 - [ ] All three pass platform test harness
 - [ ] Auth flows documented
 - [ ] Message normalization documented
@@ -63,12 +63,12 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Implement WhatsApp adapter
-- [ ] Implement Gmail adapter
-- [ ] Implement Calendar adapter
+- [ ] Configure and test WhatsApp via native Baileys adapter + normalization
+- [ ] Configure and test Gmail via native `gog` (Pub/Sub push + send) + enhancement layer
+- [ ] Configure and test Calendar via native `gog` CRUD + analysis layer
 - [ ] Write end-to-end test per channel
-- [ ] Document auth flow per channel
-- [ ] Document message normalization
+- [ ] Document auth flow per channel (QR/pairing for WhatsApp, OAuth2 for Gmail/Calendar)
+- [ ] Document message normalization (AmaraEvent envelope)
 
 ## Dependencies
 
@@ -79,3 +79,4 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - ~~Does Amara handle WhatsApp via the existing OpenClaw plugin, or does she own her own adapter?~~ **Resolved:** Use OpenClaw native adapter (D4)
 - ~~Is Gmail polling acceptable for v1, or is Pub/Sub required for acceptable latency?~~ **Resolved:** Use native Pub/Sub push via `gog gmail watch serve` (D5). OpenClaw has full push infrastructure with auto-renewal and setup wizard.
 - ~~Which Calendar operations are in scope for the first release?~~ **Resolved:** Read events + create/update using native `gog calendar` CRUD (D6). Invite management deferred.
+- How are threading and reply context preserved across channels? (Unresolved — affects AmaraEvent envelope schema in D11. Owner: Epic 7/8. Must decide before normalization layer implementation.)

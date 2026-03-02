@@ -51,7 +51,7 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | **Event bus** | 27 plugin hook types + diagnostic event stream (federated, no centralized bus) | Hook-based lifecycle events (not pub/sub) | Both lack a centralized event bus; OpenClaw's hook system is comprehensive (session, message, tool, subagent, gateway lifecycle) |
 | **Canvas/UI** | A2UI (agent-generated HTML via Gateway) | CLI/TUI only | OpenClaw advantage |
 | **Model flexibility** | 13+ built-in providers + local inference | 4 backends (Nous/OpenRouter/OpenAI/custom) + litellm | OpenClaw broader native support |
-| **Maturity** | ~4 months (Nov 2025), 175K+ stars, 13.7K+ community skills | v0.1.0 (announced Feb 26, 2026), 1.4K stars | OpenClaw significantly more battle-tested |
+| **Maturity** | ~4 months (Nov 2025), active community, 13.7K+ community skills (as of 2026-03-02) | v0.1.0 (announced Feb 26, 2026), early stage (as of 2026-03-02) | OpenClaw significantly more battle-tested |
 | **License** | MIT | MIT | Parity |
 
 ### Evaluation Criteria (Weighted)
@@ -93,10 +93,10 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Candidate | Reason Excluded | Evidence |
 |---|---|---|
 | Moltworker (Cloudflare) | Serverless — can't access local files or run shell commands. Amara needs persistent local state + tool execution. | Cloudflare blog: "cannot access your local files or run shell commands" |
-| Nanobot | Only Telegram + WhatsApp. No Gmail, Calendar, or iMessage. | superprompt.com comparison |
-| NanoClaw | WhatsApp only (Baileys). No other channels. | macobserver.com comparison |
-| memU | No messaging channel integration at all. Local-only memory system. | superprompt.com comparison |
-| NullClaw/PicoClaw | Edge/embedded focus. Too minimal for multi-channel personal assistant. | o-mega.ai comparison |
+| Nanobot | Only Telegram + WhatsApp. No Gmail, Calendar, or iMessage. | GitHub repo README (as of 2026-03-02) |
+| NanoClaw | WhatsApp only (Baileys). No other channels. | GitHub repo README (as of 2026-03-02) |
+| memU | No messaging channel integration at all. Local-only memory system. | GitHub repo README (as of 2026-03-02) |
+| NullClaw/PicoClaw | Edge/embedded focus. Too minimal for multi-channel personal assistant. | GitHub repo README (as of 2026-03-02) |
 | Agent S3 | Computer-use agent (OSWorld benchmark), not a messaging platform host. | Simular AI docs |
 
 > See Decision Log entry **D0** for the formal decision record.
@@ -148,13 +148,14 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 |---|---|---|---|
 | Orchestrator / planner | Amara core | Epic 5 | The always-on brain. OpenClaw provides agent sessions but no orchestration layer. Amara must build: intake → plan → delegate → track → complete. |
 | Agent registry | Amara core | Epic 4 | YAML + markdown bundles defining specialist agents. OpenClaw multi-agent routing is per-channel, not per-capability. Amara needs capability-based routing. |
-| Structured I/O contract | Amara core | Epic 4 | Agents need typed input/output schemas. OpenClaw agent communication is unstructured text. |
+| Structured I/O contract | Amara core | Epic 4 | Agents need typed input/output schemas for task assignments and results. OpenClaw provides JSON transport (D7), but Amara must define the semantic contract: task assignment format, result report format, and schema versioning. |
 | Multi-agent coordination | Amara core | Epic 5 | Parallel task execution, result aggregation, conflict resolution. OpenClaw `agentToAgent` is basic point-to-point. |
 | Human escalation loop | Amara core | Epic 6 | When blocked or ambiguous, route to human for decision. OpenClaw has no escalation concept. |
 | Gmail enhanced compose | Amara service | Epic 8 | `gog gmail send` provides text, HTML, reply-to, and draft support natively. Amara needs: attachment handling (beyond `--body-file`), template-based compose, batch operations. Build as thin wrapper over `gog`. |
-| Calendar event model | Amara service | Epic 8 | `gog` provides full CRUD (list/create/update with colors). Amara needs: invite management, RSVP, conflict detection, scheduling suggestions. Build as analysis layer on top of native `gog` calendar data. |
+| Calendar event model | Amara service | Epic 8 | `gog` provides full CRUD (list/create/update with colors). v1 scope: conflict detection and scheduling suggestions. v2 scope: invite management, RSVP (requires direct Calendar API calls beyond `gog`). Build as analysis layer on top of native `gog` calendar data. |
 | Dashboard UI | Amara service | Epic 10 | Task visibility, audit log, mobile-optimized. Leverage OpenClaw Canvas/A2UI as the rendering surface. |
 | Channel adapter normalization | Amara core | Epic 7 | OpenClaw channels emit different event shapes. Amara needs a common envelope format for the orchestrator. |
+| Cross-channel threading / reply context | Amara core | Epic 7, Epic 8 | How are reply chains and thread context preserved across channels in the AmaraEvent envelope? Each channel has different threading models (WhatsApp: quoted message, Gmail: thread ID, Telegram: reply_to_message_id). Must be resolved before normalization layer. |
 
 ### P2 — Enhancements
 
@@ -406,7 +407,7 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 |---|---|---|
 | Acknowledgment latency (P95) | < 1000 ms | Template response, no model invocation. Measured from event receipt to ack sent. |
 | Agent response latency (P95) | < 45 s | Includes model inference + tool calls. Interim status updates sent every 15s for long-running tasks. |
-| Task persistence durability | RPO = 0 for acknowledged tasks | Once a task is acknowledged, it must survive process crash and power loss. SQLite WAL with `synchronous=FULL` (required for RPO=0 under power-loss scenarios; NORMAL can lose recent commits). |
+| Task persistence durability | RPO = 0 for acknowledged tasks (process crash, OOM kill) | Once a task is acknowledged, it must survive process crash and OOM kill. SQLite WAL with `synchronous=FULL`. Note: RPO=0 under sudden power loss depends on hardware write-cache behavior (battery-backed caches honor fsync; consumer SSDs may not). For full durability, enable periodic backups of `~/.amara/tasks.db` via cron or backup script. |
 | Availability target | ≥ 95% uptime | Single-user system. Planned maintenance acceptable with notification. No formal SLA. |
 | Max concurrent tasks | 10 | Orchestrator processes up to 10 tasks in parallel. Queue depth > 10 triggers backpressure (new tasks queued, not dropped). |
 | Event queue max depth | 100 | Beyond 100 queued events, system emits health warning via OTLP. Events are never dropped. |
@@ -436,7 +437,7 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 | Prompt injection via inbound messages | Attacker sends crafted WhatsApp/email message to manipulate agent behavior | OpenClaw wraps external content with safety boundaries by default (`allowUnsafeExternalContent: false`). Amara treats inbound messages as untrusted data, not instructions. |
 | Token exfiltration via agent output | Specialist agent inadvertently outputs OAuth tokens or API keys | Secrets are never injected into agent context. OTLP telemetry redacts sensitive text before export (OpenClaw `Diagnostic-OTel` plugin). |
 | Stale token persistence | Revoked tokens remain cached and used | Auth-profile fallback chain checks validity on use. `auth-profiles.json` stores `expires_at`; refresh failures trigger human alert. |
-| Webhook forgery | Attacker sends fake Gmail Pub/Sub notifications | Webhook endpoint requires `Authorization: Bearer {hooks.token}` or `X-OpenClaw-Token` header. Rate limiting: 20 failed auth attempts / 60s → 429. |
+| Webhook forgery | Attacker sends fake Gmail Pub/Sub notifications | Webhook endpoint requires `Authorization: Bearer {hooks.token}` or `X-OpenClaw-Token` header. Rate limiting: 20 failed auth attempts / 60s → 429. Production hardening: validate Google Pub/Sub push subscription OIDC JWT signature (issuer: `accounts.google.com`, audience: webhook URL) and enforce replay window (reject messages older than 5 minutes). |
 | Agent sandbox escape | Specialist agent breaks out of Docker container | OpenClaw sandbox blocks dangerous bind sources (`docker.sock`, `/etc`, `/proc`, `/sys`, `/dev`), supports seccomp/AppArmor profiles, capability dropping, and namespace isolation. |
 
 ### Secret Storage
@@ -453,10 +454,10 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 | Message content | OpenClaw Memory DB | 90 days | Conversation history for context |
 | Task records | Amara Task DB | 90 days | Task tracking and audit |
 | Contact names | OpenClaw Memory DB | 90 days | Sender identification |
-| OAuth tokens | OpenClaw workspace | Until revoked | API access |
+| OAuth tokens | OpenClaw workspace | Until revoked (exempt from auto-purge) | API access — managed by OpenClaw auth-profiles lifecycle |
 | Agent outputs | Amara Task DB | 90 days | Result storage and review |
 
-**Retention policy:** All PII data older than 90 days is automatically purged. Configurable via `~/.amara/config.yaml`.
+**Retention policy:** All user content data (messages, task records, contacts, agent outputs) older than 90 days is automatically purged. Configurable via `~/.amara/config.yaml`. **OAuth tokens are exempt** — they persist until explicitly revoked via `amara delete-my-data` or manual revocation, since purging them would break channel connectivity.
 
 ### Audit Logging
 
@@ -471,8 +472,8 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 `amara delete-my-data` command performs:
 
 1. Emit confirmation via all connected channels ("Data deletion starting — you will lose access to Amara after this completes.")
-2. Purge all records from Amara Task DB
-3. Purge all records from Amara Event Queue
+2. Purge all tables from Amara Task DB (`tasks`, `audit_log` tables)
+3. Purge event queue table from Amara Task DB (`event_queue`, `amara_dlq` tables — same SQLite file, separate tables)
 4. Request OpenClaw purge Amara-tagged data from Memory DB (via OpenClaw's deletion API)
 5. Delete Amara config files
 6. Revoke all OAuth tokens (done last — channels need tokens for step 1)
