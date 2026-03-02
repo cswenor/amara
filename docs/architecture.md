@@ -120,7 +120,7 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
 
 ## Security Summary
 
-- **Least-privilege OAuth** — minimum scopes per service (gmail.readonly + gmail.send, calendar.readonly + calendar.events, contacts.readonly)
+- **Least-privilege OAuth** — minimum scopes per service (gmail.readonly + gmail.send + gmail.compose, calendar.readonly + calendar.events, contacts.readonly)
 - **Secrets** — delegated to OpenClaw auth-profiles mechanism (`~/.openclaw/agents/{agentId}/agent/auth-profiles.json`), never logged
 - **PII retention** — 90-day auto-purge, configurable
 - **Audit** — correlation-ID linked to OTLP traces

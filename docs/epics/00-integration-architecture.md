@@ -422,7 +422,7 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 
 | Service | Scopes | Justification |
 |---|---|---|
-| Gmail | `gmail.readonly`, `gmail.send` | Read inbound for triage; send replies and drafts. No `gmail.modify` (no label/archive manipulation in v1). |
+| Gmail | `gmail.readonly`, `gmail.send`, `gmail.compose` | Read inbound for triage; send messages directly; create/manage/send drafts. No `gmail.modify` (no label/archive manipulation in v1). |
 | Google Calendar | `calendar.readonly`, `calendar.events` | Read events for conflict detection; create/update events for scheduling. |
 | Google Contacts | `contacts.readonly` | Name resolution for sender identification. No write access. |
 
