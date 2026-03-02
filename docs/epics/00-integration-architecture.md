@@ -530,7 +530,7 @@ Amara monitors all communications across all channels. The triage layer makes a 
 | Stale token persistence | Revoked tokens remain cached and used | Auth-profile fallback chain checks validity on use. `auth-profiles.json` stores `expires_at`; refresh failures trigger human alert. |
 | Webhook forgery | Attacker sends fake Gmail Pub/Sub notifications | Webhook endpoint requires `Authorization: Bearer {hooks.token}` or `X-OpenClaw-Token` header. Rate limiting: 20 failed auth attempts / 60s → 429. Production hardening: validate Google Pub/Sub push subscription OIDC JWT signature (issuer: `accounts.google.com`, audience: webhook URL) and enforce replay window (reject messages older than 5 minutes). |
 | Agent sandbox escape | Specialist agent breaks out of Docker container | OpenClaw sandbox blocks dangerous bind sources (`docker.sock`, `/etc`, `/proc`, `/sys`, `/dev`), supports seccomp/AppArmor profiles, capability dropping, and namespace isolation. |
-| Autonomous triage misclassification | Triage layer archives important email or takes wrong autonomous action | Triage confidence thresholds: Level 1 actions (archive, label) require high confidence (>0.95). Uncertain messages escalate to Level 2 (fast model) or Level 4 (flag human). Triage log provides audit trail. User can review and undo autonomous actions via Dashboard. Initial deployment: conservative rules with gradual threshold tuning. |
+| Autonomous triage misclassification | Triage layer archives important email or takes wrong autonomous action | Triage confidence thresholds: Level 1 actions (archive, label, mark read) require high confidence (>0.95). Uncertain messages escalate to Level 2 (fast model) or Level 4 (flag human). Triage log provides audit trail. User can review and undo reversible actions (unarchive, remove label) via Dashboard; some actions like mark-as-read are not fully reversible. Initial deployment: conservative rules with gradual threshold tuning. |
 
 ### Secret Storage
 
@@ -641,7 +641,7 @@ Epic 1 (and all other epics) may not begin until **all** of the following are tr
 | Epic 5 (Orchestrator) | In-process or separate? How do agents communicate? What events reach the orchestrator? | D1 (in-process), D7 (structured protocol), D13 (only direct + escalated events) |
 | Epic 6 (Recovery & HITL) | How does escalation work? | Section 7 (escalation path) |
 | Epic 7 (Channel Platform) | Use platform adapters or custom? How are channels bound (account vs thread)? | D4, D5, D6, D11 (platform + normalization), D13 (channel binding model) |
-| Epic 8 (Channel Integrations) | WhatsApp/Gmail/Calendar strategy? | D4, D5, D6 |
+| Epic 8 (Channel Integrations) | WhatsApp/Gmail/Calendar strategy? What envelope format? What triage actions need Gmail API? | D4, D5, D6, D11 (envelope + mode field), D13 (Gmail inbox management for triage) |
 | Epic 9 (Specialist Agents) | How are agents defined and routed? | D10, Section 4 (registry) |
 | Epic 10 (Dashboard) | Where does it run? | D8 (Canvas/A2UI) |
 | Epic 11 (Onboarding) | What runtime? What config? | D0 (Node.js/OpenClaw), Section 6 (data stores) |

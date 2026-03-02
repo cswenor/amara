@@ -44,7 +44,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 ## Definition of Done
 
 - [ ] WhatsApp integration configured, tested end-to-end (native Baileys adapter + Amara normalization)
-- [ ] Gmail integration configured, tested end-to-end (native `gog` Pub/Sub push + Amara enhancement layer)
+- [ ] Gmail integration configured, tested end-to-end (native `gog` Pub/Sub push + Amara enhancement layer + Gmail inbox management wrapper for triage actions)
 - [ ] Calendar integration configured, tested end-to-end (native `gog` CRUD + Amara analysis layer)
 - [ ] All three pass platform test harness
 - [ ] Auth flows documented
