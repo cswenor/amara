@@ -7,24 +7,26 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 **Epics:** 0
 **Goal:** Resolve all boundary questions before a line of implementation code is written.
 
-- [ ] Host platform evaluated and selected (OpenClaw — see Epic 0, Section 1.5)
-- [ ] OpenClaw capabilities matrix audited (native/partial/gap for all rows)
-- [ ] Gap analysis complete (P0/P1/P2 prioritized)
-- [ ] Component boundaries decided (plugin vs service vs external)
-- [ ] Runtime topology chosen (single-process, SQLite WAL queue)
-- [ ] NFRs, security constraints, and decision log documented
-- [ ] Exit criteria met → implementation unlocked
+- [x] Host platform evaluated and selected (OpenClaw — see Epic 0, Section 1.5)
+- [x] OpenClaw capabilities matrix audited (native/partial/gap for all rows)
+- [x] Gap analysis complete (P0/P1/P2 prioritized)
+- [x] Component boundaries decided (plugin vs service vs external)
+- [x] Runtime topology chosen (single-process, SQLite WAL queue)
+- [x] NFRs, security constraints, and decision log documented
+- [x] Exit criteria met → implementation unlocked
 
-## Milestone 1 — Foundation
+## Milestone 1 — Foundation + Visibility
 
-**Epics:** 1, 2, 3
-**Goal:** Persistence, security contracts, and observability wiring in place before any feature work.
+**Epics:** 1, 2, 3, 10
+**Goal:** Persistence, security contracts, observability, and dashboard in place before any feature work. Dashboard early so you can see what's happening as subsequent milestones are built.
 
 - [ ] SQLite task state machine operational
-- [ ] Event bus wired
+- [ ] Event queue wired (SQLite WAL, at-least-once delivery)
 - [ ] OAuth/secret handling defined
 - [ ] Audit logging live
 - [ ] Trace and log pipeline running
+- [ ] Dashboard showing active/pending/history (via Canvas/A2UI)
+- [ ] Audit log browsable in UI
 
 ## Milestone 2 — Agent Infrastructure
 
@@ -70,14 +72,12 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 - [ ] Writing agent handling prose tasks
 - [ ] Generic doer as fallback
 
-## Milestone 6 — Visibility & Deployment
+## Milestone 6 — Deployment & Polish
 
-**Epics:** 10, 11
-**Goal:** Dashboard live; install flow documented; system runnable by someone other than the author.
+**Epics:** 10 (polish phase), 11
+**Goal:** Install flow documented; system runnable by someone other than the author. Dashboard polish (mobile layout, advanced views).
 
-- [ ] Dashboard showing active/pending/history
-- [ ] Audit log browsable in UI
-- [ ] Mobile-optimized layout working
+- [ ] Mobile-optimized dashboard layout working
 - [ ] Install flow documented and tested
 - [ ] Account connection flow working
 - [ ] Getting-started guide complete
@@ -86,7 +86,7 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 
 Items not assigned to a milestone yet:
 
-- Recurring / cron-style tasks
+- User-authored recurring tasks (beyond core follow-up scheduler, which is P0 in Epic 1)
 - Sub-agent progress relay (real-time status)
 - Model-based routing (replace keyword heuristics)
 - Multi-user support
