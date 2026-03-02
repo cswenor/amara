@@ -8,6 +8,7 @@ Navigation hub for all Amara documentation and planning.
 |----------|---------|
 | [architecture.md](architecture.md) | System design overview, component diagram |
 | [roadmap.md](roadmap.md) | Sequenced milestones across epics |
+| [milestone-1-plan.md](milestone-1-plan.md) | M1 cross-epic dependencies, critical path, 33 stories |
 
 ## Epics
 
