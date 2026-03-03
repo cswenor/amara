@@ -191,7 +191,7 @@ A minimal web UI for task visibility: active tasks, pending tasks, history, and 
 **Description:** Integrate the dashboard into Amara's runtime as a same-process Gateway HTTP endpoint (D8). Implement WebSocket push for real-time updates instead of polling.
 
 **Acceptance Criteria:**
-- [ ] Dashboard static assets served from Gateway HTTP endpoint
+- [ ] Dashboard static assets served from Gateway HTTP endpoint (must use `registerHttpRoute()` — not removed `registerHttpHandler()` — for route registration per v2026.3.2-beta.1 breaking change)
 - [ ] WebSocket endpoint established for push updates
 - [ ] Task state changes pushed to connected dashboard clients
 - [ ] Triage log entries pushed to connected dashboard clients

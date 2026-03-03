@@ -4,7 +4,7 @@
 
 ## Overview
 
-Amara is an opinionated personal assistant built on top of **OpenClaw** (selected as host platform — see [Epic 0, Section 1.5](epics/00-integration-architecture.md#15-platform-selection)). She operates in two modes:
+Amara is an opinionated personal assistant built on top of **OpenClaw** (minimum version: v2026.3.2-beta.1 — [D15](epics/00-integration-architecture.md#10-decision-log); selected as host platform — see [Epic 0, Section 1.5](epics/00-integration-architecture.md#15-platform-selection)). She operates in two modes:
 
 1. **Monitored mode** — passively observes ALL communications (full email inbox, all WhatsApp conversations, full calendar). A fast triage layer makes autonomous decisions on most messages (archive spam, label, mark read, note context) without entering the full orchestrator pipeline.
 2. **Direct mode** — the user talks to Amara specifically (dedicated thread, specific address). All messages enter the full orchestrator pipeline for planning and delegation.
@@ -75,13 +75,13 @@ Amara is a **manager, not a doer**. She runs on a fast model and coordinates spe
 
 ### OpenClaw (Host Platform)
 
-The plugin host that provides channel adapters (WhatsApp via Baileys, Telegram, Gmail via `gog` with Pub/Sub push, Calendar via `gog` with full CRUD, iMessage via BlueBubbles, plus 15+ more), webhook lifecycle management, Docker sandboxing (per-session with security controls), OTLP observability (17+ metrics), and a modular plugin SDK (channels, tools, hooks, commands, services, providers). Amara runs as a set of tool plugins within the OpenClaw Gateway process.
+The plugin host that provides channel adapters (WhatsApp via Baileys, Telegram, Gmail via `gog` with Pub/Sub push, Calendar via `gog` with full CRUD, iMessage via BlueBubbles, plus 15+ more), webhook lifecycle management, Docker sandboxing (per-session with security controls), OTLP observability (17+ metrics), and a modular plugin SDK (channels, tools, hooks, commands, services, providers). Amara runs as a set of tool plugins within the OpenClaw Gateway process. **v2026.3.2-beta.1 version-gated features:** `message:preprocessed` hook, `sessionKey` in lifecycle hooks, `onAgentEvent`/`onSessionTranscriptUpdate` runtime events, `requestHeartbeatNow()`, session attachments, `channelRuntime` context, `transcribeAudioFile()` API, SecretRef expansion (64 targets), ACP dispatch default-enabled. See [Section 1.6](epics/00-integration-architecture.md#16-minimum-openclaw-version).
 
 **Selected over** Hermes Agent, Moltworker, and others. See [Platform Selection rationale](epics/00-integration-architecture.md#15-platform-selection).
 
 ### Amara Triage Layer (Epic 1, Epic 5)
 
-The fast decision engine between normalization and orchestrator. Classifies every inbound event into one of two modes:
+The fast decision engine between normalization and orchestrator. The `message:preprocessed` hook (v2026.3.2-beta.1, beta — verify event shape on stable release) is a candidate interception point for this layer, providing early access to messages before standard processing. Classifies every inbound event into one of two modes:
 
 - **Direct mode** — user is talking to Amara. All events pass through to the event queue and orchestrator.
 - **Monitored mode** — passive observation. The triage layer makes autonomous silent actions: archive spam, label, mark read, draft replies (<200ms rules-based or <2s fast model). Triage never sends outbound messages. ~10% of monitored messages escalate to orchestrator.
@@ -90,7 +90,7 @@ All triage decisions are logged to the `triage_log` table for Dashboard visibili
 
 ### Amara Orchestrator (Epic 5)
 
-The always-on brain. Receives direct-mode events and escalated monitored-mode events via the event queue. Acknowledges immediately, breaks work into tasks, delegates to specialist agents, and monitors progress. Runs on a fast model. Lives in-process as an OpenClaw tool plugin.
+The always-on brain. Receives direct-mode events and escalated monitored-mode events via the event queue. Acknowledges immediately, breaks work into tasks, delegates to specialist agents, and monitors progress. Runs on a fast model. Lives in-process as an OpenClaw tool plugin. Delegation tracking leverages `onAgentEvent` and `onSessionTranscriptUpdate` (v2026.3.2-beta.1, beta — verify on stable) for real-time progress signals. Note: `onSessionTranscriptUpdate` data is PII-bearing and subject to Epic 2 retention policy.
 
 ### Task State Machine (Epic 1)
 
@@ -152,7 +152,7 @@ Task visibility UI leveraging OpenClaw's Canvas/A2UI feature. Served via the Gat
 | Triage decision latency (P95) | < 200 ms |
 | Triage throughput | ≥ 500 messages/day |
 | Acknowledgment latency (P95) | < 1000 ms (direct + escalated events) |
-| Agent response (P95) | < 45 s (with interim updates every 15s) |
+| Agent response (P95) | < 45 s (with interim updates every 15s via `onSessionTranscriptUpdate` — v2026.3.2-beta.1, beta) |
 | Task persistence | RPO = 0 for acknowledged tasks (process crash/OOM; see [Epic 0 caveats](epics/00-integration-architecture.md#8-non-functional-requirements)) |
 | Availability | ≥ 95% uptime (no formal SLA) |
 | Concurrent tasks | Max 10 |

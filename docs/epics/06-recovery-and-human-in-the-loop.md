@@ -15,6 +15,7 @@ Handles what happens when tasks stall, agents fail, or Amara genuinely needs a h
 
 **In:**
 - Follow-up scheduler (re-check in-progress tasks on a configurable interval)
+- `requestHeartbeatNow()` for on-demand re-checks (v2026.3.2-beta.1, beta — verify on stable). Enables immediate scheduler trigger without waiting for next heartbeat interval.
 - Stall detection (task has been in-progress too long without progress)
 - Human escalation (send a question to the human via the originating channel)
 - Retry-with-feedback (re-run agent with human answer appended to context)
@@ -65,7 +66,7 @@ Handles what happens when tasks stall, agents fail, or Amara genuinely needs a h
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Implement follow-up scheduler
+- [ ] Implement follow-up scheduler (with `requestHeartbeatNow()` for on-demand re-checks — D15, beta-caveat)
 - [ ] Implement stall detection
 - [ ] Implement human escalation with question formatting
 - [ ] Implement retry-with-feedback
@@ -80,6 +81,6 @@ Handles what happens when tasks stall, agents fail, or Amara genuinely needs a h
 
 ## Open Questions
 
-- Should the scheduler be a cron job, a setInterval, or event-driven (e.g., on task update)? *(Note: architecture.md describes the scheduler as heartbeat-driven)*
+- Should the scheduler be a cron job, a setInterval, or event-driven (e.g., on task update)? *(Note: architecture.md describes the scheduler as heartbeat-driven. `requestHeartbeatNow()` from v2026.3.2-beta.1 provides an on-demand trigger — the scheduler can use both periodic heartbeats AND event-driven triggers for immediate re-checks.)*
 - How does the human reply get correlated back to the task? (reply detection / explicit command?)
 - Is there a maximum number of retries before a task is permanently failed?

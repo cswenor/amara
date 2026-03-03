@@ -36,7 +36,7 @@ Establishes the foundational persistence and event layer that every other epic b
 - [x] WAL mode: yes, enabled by default with `synchronous=FULL` for crash safety (D2, D3)
 - [x] Event bus implementation: SQLite WAL-mode queue with poll + mark-complete consumer — no in-process EventEmitter (D3)
 - [x] Task schema minimum fields: `task_id`, `state`, `channel`, `created_at`, `updated_at`, `correlation_id` (Epic 0, Section 6)
-- [x] Migration tool: Raw SQL files + hand-rolled runner. Numbered `.sql` files in `migrations/` (e.g., `001_initial_schema.sql`), `schema_version` table tracks applied migrations, runner reads in order, skips applied, wraps each in a transaction (~50 lines TS). Rationale: Node.js >=22 has built-in `node:sqlite`, schema is small (5-7 tables), avoids external deps, satisfies idempotency success metric.
+- [x] Migration tool: Raw SQL files + hand-rolled runner. Numbered `.sql` files in `migrations/` (e.g., `001_initial_schema.sql`), `schema_version` table tracks applied migrations, runner reads in order, skips applied, wraps each in a transaction (~50 lines TS). Rationale: Node.js >=22.12 has built-in `node:sqlite`, schema is small (5-7 tables), avoids external deps, satisfies idempotency success metric.
 
 ## Success Metrics
 
@@ -245,4 +245,4 @@ Phase 4 (unblocked by Phase 3):         │
 - ~~What fields does a Task record need at minimum?~~ **Resolved:** `task_id`, `state`, `channel`, `created_at`, `updated_at`, `correlation_id` (Epic 0, Section 6)
 - ~~Should the event bus be synchronous or async?~~ **Resolved:** Async — SQLite WAL queue with poll consumer (D3)
 - ~~Do we need soft-delete on tasks, or just a `failed`/`cancelled` state?~~ **Resolved:** No soft-delete; use `failed` state for terminal failures (Epic 0, Section 7)
-- ~~Migration tool: raw SQL files, a migration library, or hand-rolled?~~ **Resolved:** Raw SQL files + hand-rolled runner. Numbered `.sql` files in `migrations/`, `schema_version` table tracks applied migrations, ~50 lines TS. Node.js >=22 built-in `node:sqlite` eliminates external deps.
+- ~~Migration tool: raw SQL files, a migration library, or hand-rolled?~~ **Resolved:** Raw SQL files + hand-rolled runner. Numbered `.sql` files in `migrations/`, `schema_version` table tracks applied migrations, ~50 lines TS. Node.js >=22.12 built-in `node:sqlite` eliminates external deps.

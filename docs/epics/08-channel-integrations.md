@@ -21,6 +21,8 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - Channel binding configuration: which channels/threads are "direct" (to Amara) vs "monitored" (passive observation)
 - Channel write permission enforcement: monitored channels allow read + silent triage actions (archive, label, mark read, draft) but no outbound messaging by default; sending requires explicit authorization (per-instruction or standing rule per D14)
 - Channel-specific auth flows: QR/pairing session for WhatsApp (Baileys), OAuth2 for Gmail/Calendar (via `gog auth`)
+- `channelRuntime` on gateway context for adapter health checks (v2026.3.2-beta.1, beta — verify on stable)
+- **P2 enhancement (not v1 scope):** Voice message transcription via `transcribeAudioFile()` (v2026.3.2-beta.1, beta). WhatsApp voice messages are out of scope for current milestones (1-5). Available for future implementation when voice channel support is prioritized.
 
 **Out:**
 - Adapter interface definition (Epic 7)
@@ -61,6 +63,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 | WhatsApp API changes break adapter | Pin API version; monitor changelogs |
 | Calendar API quota limits | Cache reads; batch writes |
 | OAuth token refresh fails silently | Explicit refresh error handling; alert to human |
+| Discord channel changes | No impact — Discord is not in Milestone 1-5 scope. No changes needed for v2026.3.2-beta.1 compatibility. |
 
 ## Stories
 
@@ -75,6 +78,7 @@ Implements WhatsApp, Gmail, and Calendar on top of the Channel Platform (Epic 7)
 - [ ] Write end-to-end test per channel
 - [ ] Document auth flow per channel (QR/pairing for WhatsApp, OAuth2 for Gmail/Calendar)
 - [ ] Document message normalization (AmaraEvent envelope with `mode` field)
+- [ ] **(P2 — deferred)** Implement voice message transcription via `transcribeAudioFile()` (v2026.3.2-beta.1, beta). Not in v1 scope — WhatsApp voice messages require additional handling (media download, format conversion) beyond the transcription API itself.
 
 ## Dependencies
 

@@ -21,6 +21,7 @@ Implements the specialist agents that Amara delegates to: Comms, Research, Codin
 - Generic Doer (broad capability fallback)
 - Agent bundle files for each (YAML front-matter + markdown body — D10)
 - Structured input/output contracts per agent (using Amara structured protocol — D7)
+- Session attachments for file passing between orchestrator and agents (v2026.3.2-beta.1, beta — verify on stable)
 
 **Out:**
 - Agent routing (Epic 4)
@@ -32,6 +33,8 @@ Implements the specialist agents that Amara delegates to: Comms, Research, Codin
 - [ ] What model does each agent use? (cost vs. capability tradeoff)
 - [ ] What tools does each agent have access to? (web search / code interpreter / file system?)
 - [ ] Structured output format: JSON schema / TypeScript type / Zod?
+- [x] File passing between agents: via session attachments (v2026.3.2-beta.1, beta — verify on stable). Enables structured file handoff without filesystem workarounds.
+- [x] `tools.profile` requirement: all agent bundles must explicitly declare `tools.profile` (v2026.3.2-beta.1 breaking change). See [Epic 4 schema](04-agent-registry-and-routing.md) and [migration checklist](00-integration-architecture.md#16-minimum-openclaw-version).
 - [x] How long can an agent run? <45s P95, with interim updates every 15s (Epic 0, Section 8)
 - [ ] How do agents handle "I can't do this"?
 
@@ -57,6 +60,7 @@ Implements the specialist agents that Amara delegates to: Comms, Research, Codin
 
 | Risk | Mitigation |
 |------|-----------|
+| `tools.profile` default change breaks agent tool access | All agent bundles MUST declare `tools.profile` explicitly. See [Epic 4 migration checklist](00-integration-architecture.md#16-minimum-openclaw-version). |
 | Agent scope creep (agents doing work outside their mandate) | Strict tool access lists; mandate review in bundle |
 | Agents produce inconsistent output formats | Structured output validation on every response |
 | Generic Doer too capable — routing always falls through to it | Monitor routing distribution; tune routing logic |
@@ -66,6 +70,8 @@ Implements the specialist agents that Amara delegates to: Comms, Research, Codin
 
 > Placeholder — to become GitHub issues.
 
+- [ ] Configure `tools.profile` for all agent bundles (required field — v2026.3.2-beta.1 breaking change)
+- [ ] Implement session attachment file passing for agent delegation (D15, beta-caveat)
 - [ ] Define structured input/output contracts
 - [ ] Implement Comms agent
 - [ ] Implement Research agent
