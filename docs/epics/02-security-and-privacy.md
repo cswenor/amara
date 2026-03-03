@@ -87,7 +87,7 @@ Establishes the security and privacy contracts for Amara before channels or depl
 
 ### S2.2: Implement secret storage
 
-**Description:** Verify and document the OpenClaw auth-profiles integration (D9) for storing OAuth tokens and other secrets. Confirm the file-based storage at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json` works for Amara's needs.
+**Description:** Verify and document the OpenClaw auth-profiles integration (D9) for storing OAuth tokens and other secrets. Confirm the file-based storage at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json` works for Amara's needs. Note: v2026.3.2-beta.1 expands SecretRef to support 64 targets with fail-fast validation — verify this covers Amara's secret indirection needs.
 
 **Acceptance Criteria:**
 - [ ] Auth-profiles path confirmed and documented
@@ -120,7 +120,7 @@ Establishes the security and privacy contracts for Amara before channels or depl
 
 ### S2.4: Define PII inventory and retention policy
 
-**Description:** Document all user data Amara stores, why it's stored, and how long it's retained. This is a policy document that gates data deletion implementation.
+**Description:** Document all user data Amara stores, why it's stored, and how long it's retained. This is a policy document that gates data deletion implementation. Note: `onSessionTranscriptUpdate` (v2026.3.2-beta.1, beta) data is PII-bearing — session transcript updates contain message content and must be included in the PII inventory and subject to the retention policy.
 
 **Acceptance Criteria:**
 - [ ] Inventory table: data field, storage location, purpose, retention period

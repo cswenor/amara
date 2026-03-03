@@ -29,6 +29,8 @@ Defines the agent definition format, implements the registry that loads and vali
 ## Key Decisions
 
 - [x] Bundle format: YAML front-matter + markdown body, file-based — loaded from disk at startup (D10)
+- [x] ACP dispatch: default-enabled in v2026.3.2-beta.1 (stable change). All agent bundles must account for ACP as the default delegation transport.
+- [x] `tools.profile` requirement: v2026.3.2-beta.1 changed the default `tools.profile` behavior (stable, breaking change). Agent bundle schema MUST include `tools.profile` as a **required field** to prevent breakage from the default change. See [Section 1.6 migration checklist](00-integration-architecture.md#16-minimum-openclaw-version).
 - [ ] How are agent capabilities declared? (tags, skill list, free-text, embedding?)
 - [ ] Routing algorithm: keyword match / embedding similarity / model-based classifier?
 - [ ] How are agents versioned? (semver in YAML / git tag?)
@@ -55,6 +57,7 @@ Defines the agent definition format, implements the registry that loads and vali
 
 | Risk | Mitigation |
 |------|-----------|
+| `tools.profile` default change breaks agent tool access | All bundles MUST declare `tools.profile` explicitly. Schema validation rejects bundles without it. See [migration checklist](00-integration-architecture.md#16-minimum-openclaw-version). |
 | Routing logic too naive for real tasks | Start with keyword/tag matching; plan upgrade path to embedding |
 | Agent bundle format too rigid to extend | Keep format open; use semver to evolve |
 | Generic doer becomes a dumping ground | Define explicit "I don't know" escalation path |
@@ -63,8 +66,8 @@ Defines the agent definition format, implements the registry that loads and vali
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Define agent bundle schema (YAML front-matter + markdown body — D10)
-- [ ] Implement registry loader and validator
+- [ ] Define agent bundle schema (YAML front-matter + markdown body — D10). Schema MUST include mandatory `tools.profile` field (v2026.3.2-beta.1 breaking change — prevents silent default behavior)
+- [ ] Implement registry loader and validator (reject bundles missing `tools.profile`)
 - [ ] Implement schema validation for agent bundles (D10 consequence — reject malformed bundles)
 - [ ] Define three agent types
 - [ ] Implement routing / matching algorithm

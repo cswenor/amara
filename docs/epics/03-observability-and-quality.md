@@ -101,10 +101,11 @@ Wires in tracing, structured logging, agent outcome scoring, failure taxonomy, a
 
 ### S3.3: Implement correlation ID propagation
 
-**Description:** Ensure the `correlation_id` field from the tasks table is propagated through all OTLP spans and structured log entries for a request lifecycle. Any log or span produced while processing a task must include that task's correlation ID.
+**Description:** Ensure the `correlation_id` field from the tasks table is propagated through all OTLP spans and structured log entries for a request lifecycle. Any log or span produced while processing a task must include that task's correlation ID. The `sessionKey` from OpenClaw session lifecycle hooks (v2026.3.2-beta.1, beta — verify on stable) provides a native session identity that can be mapped to Amara's `correlation_id`, simplifying cross-system trace correlation.
 
 **Acceptance Criteria:**
 - [ ] `correlation_id` from task record injected into OTLP trace context
+- [ ] `sessionKey` (v2026.3.2-beta.1, beta) mapped to `correlation_id` for native session identity correlation
 - [ ] All structured log entries within a task's processing include `correlation_id`
 - [ ] Propagation works across event bus boundaries (producer → consumer)
 - [ ] Integration test: create task → process event → verify correlation_id in all spans/logs
@@ -168,7 +169,7 @@ Wires in tracing, structured logging, agent outcome scoring, failure taxonomy, a
 
 ### S3.7: Define metrics and their collection points
 
-**Description:** Document all OTLP metrics Amara will emit, where they are emitted from (collection points), and who consumes them. This is a reference document that guides instrumentation across all epics.
+**Description:** Document all OTLP metrics Amara will emit, where they are emitted from (collection points), and who consumes them. This is a reference document that guides instrumentation across all epics. New hook events from v2026.3.2-beta.1 (`onAgentEvent`, `onSessionTranscriptUpdate`, `message:preprocessed`) provide additional native collection points for delegation metrics, transcript tracking, and message preprocessing latency.
 
 **Acceptance Criteria:**
 - [ ] Metrics inventory table: metric name, type (counter/histogram/gauge), unit, collection point, consumer
@@ -219,6 +220,7 @@ Phase 3 (unblocked by Phase 2):
 
 - Epic 0 (architecture gate)
 - Epic 1 (core infrastructure) — event bus used to emit observability events
+- Note: `sessionKey` (v2026.3.2-beta.1, beta) simplifies S3.3 correlation ID propagation by providing native session identity
 
 ## Open Questions
 

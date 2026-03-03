@@ -101,6 +101,58 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 
 > See Decision Log entry **D0** for the formal decision record.
 
+## 1.6. Minimum OpenClaw Version
+
+**Required version: `v2026.3.2-beta.1` or later** (Decision D15)
+
+OpenClaw v2026.3.2-beta.1 (released March 3, 2026) introduces features that directly address capabilities Amara planned to build custom workarounds for. Pinning to this version prevents implementing custom solutions for features that are now native.
+
+**Key features requiring this version:**
+
+- `message:preprocessed` hook — candidate triage interception point (beta-caveat)
+- `sessionKey` in lifecycle hooks — native session identity correlation (beta-caveat)
+- `onAgentEvent` / `onSessionTranscriptUpdate` — delegation tracking signals (beta-caveat)
+- `requestHeartbeatNow()` — on-demand scheduler trigger (beta-caveat)
+- Session attachments — file passing between agents (beta-caveat)
+- `channelRuntime` on gateway context — channel state inspection (beta-caveat)
+- `transcribeAudioFile()` — audio transcription API (beta-caveat, P2 scope)
+- SecretRef expansion (64 targets, fail-fast validation) — stable
+- ACP dispatch default enabled — stable
+
+### Breaking Changes
+
+| Change | Impact | Migration |
+|--------|--------|-----------|
+| `tools.profile` default changed | Agent bundles without explicit `tools.profile` will use the new default, potentially breaking tool access | All agent bundles MUST declare `tools.profile` explicitly (see Epic 4 schema) |
+| `registerHttpHandler()` removed | Replaced by `registerHttpRoute()` — different API signature | Update all HTTP route registrations to use `registerHttpRoute()` (see Epic 10 S10.8) |
+| Node.js >=22.12 enforced | Previous minimum was >=22 | Update all dev environments and CI to Node.js >=22.12 |
+| ACP dispatch default enabled | `agentToAgent` delegation now uses ACP by default | Verify delegation behavior; explicit opt-out available if needed |
+
+### Critical Upstream Bug Fixes
+
+| Fix | Impact on Amara |
+|-----|----------------|
+| Session lock PID recycling fix | Prevents stale lock contention in long-running orchestrator sessions |
+| Hook duplicate dispatch fix | Prevents double-processing of events in triage layer |
+| `llm_input` context parity | Ensures consistent context available across all hook types |
+| Cron/heartbeat fixes | Improves reliability of Amara's heartbeat-driven scheduler |
+
+### Migration Checklist: `tools.profile`
+
+- [ ] Audit all agent bundle YAML files for `tools.profile` field
+- [ ] Add explicit `tools.profile` to any bundle missing it
+- [ ] Verify tool access works correctly after migration
+- [ ] Update bundle schema validation to require `tools.profile`
+
+### Migration Checklist: `registerHttpRoute()`
+
+- [ ] Search codebase for `registerHttpHandler` references
+- [ ] Replace all calls with `registerHttpRoute()` equivalent
+- [ ] Verify HTTP endpoints function correctly after migration
+- [ ] Update any documentation referencing `registerHttpHandler`
+
+> **Review trigger:** Revisit D15 when OpenClaw v2026.3.2 stable is released. Verify all beta-caveat features are stable and adjust documentation accordingly.
+
 ## 2. OpenClaw Capabilities Matrix
 
 > Status legend:
@@ -116,9 +168,9 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Gmail outbound send | native | `gog gmail send`, [`skills/gog/SKILL.md`](https://github.com/openclaw/openclaw/blob/main/skills/gog/SKILL.md) | Full send API: `--body` (plain text), `--body-html` (HTML), `--body-file` (file/stdin), `--reply-to-message-id` (thread replies). Draft create/send via `gog gmail drafts create/send`. |
 | Calendar read | native | `gog calendar events`, [`skills/gog/SKILL.md`](https://github.com/openclaw/openclaw/blob/main/skills/gog/SKILL.md) | `gog calendar events <calendarId> --from <iso> --to <iso>`. Full event listing with date ranges. |
 | Calendar write | native | `gog calendar create/update`, [`skills/gog/SKILL.md`](https://github.com/openclaw/openclaw/blob/main/skills/gog/SKILL.md) | `gog calendar create` with `--summary`, `--from`, `--to`, `--event-color` (11 color IDs). `gog calendar update` for modifications. No invite management or RSVP (Amara gap). |
-| Plugin hook event system | native | [`src/plugins/types.ts`](https://github.com/openclaw/openclaw/blob/main/src/plugins/types.ts) | 27 hook types: `message_received`, `message_sending`, `message_sent`, `session_start/end`, `before/after_tool_call`, `subagent_spawning/spawned/ended`, `gateway_start/stop`, `llm_input/output`, etc. Priority-based ordering. No centralized event bus (OpenClawBus RFC #15016 still RFC). |
+| Plugin hook event system | native | [`src/plugins/types.ts`](https://github.com/openclaw/openclaw/blob/main/src/plugins/types.ts) | 31 hook types (updated for v2026.3.2-beta.1): `message_received`, `message_sending`, `message_sent`, `message:preprocessed` (beta — verify on stable), `session_start/end`, `before/after_tool_call`, `subagent_spawning/spawned/ended`, `gateway_start/stop`, `llm_input/output`, `onAgentEvent` (beta), `onSessionTranscriptUpdate` (beta), etc. `sessionKey` available in session lifecycle hooks (beta). Priority-based ordering. No centralized event bus (OpenClawBus RFC #15016 still RFC). |
 | Persistent storage | native | [`extensions/memory-core/`](https://github.com/openclaw/openclaw/tree/main/extensions/memory-core), [`extensions/memory-lancedb/`](https://github.com/openclaw/openclaw/tree/main/extensions/memory-lancedb) | Dual backend: SQLite + sqlite-vec (cosine vector search + FTS5 BM25 keyword) and LanceDB (OpenAI embeddings). Auto-capture on messages, auto-recall on context. |
-| Auth / secret management | native | [`src/agents/auth-profiles/`](https://github.com/openclaw/openclaw/tree/main/src/agents/auth-profiles) | Per-agent workspace scoping. Tokens stored at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json`. Supports `SecretRef` indirection. Legacy `auth.json` auto-migrated. Fallback chain: agent-specific → main agent → legacy. |
+| Auth / secret management | native | [`src/agents/auth-profiles/`](https://github.com/openclaw/openclaw/tree/main/src/agents/auth-profiles) | Per-agent workspace scoping. Tokens stored at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json`. Supports `SecretRef` indirection with 64 target expansion and fail-fast validation (v2026.3.2-beta.1). Legacy `auth.json` auto-migrated. Fallback chain: agent-specific → main agent → legacy. |
 | Webhook lifecycle (register, renew, verify) | native | [`src/hooks/gmail-watcher.ts`](https://github.com/openclaw/openclaw/blob/main/src/hooks/gmail-watcher.ts), [`src/gateway/hooks.ts`](https://github.com/openclaw/openclaw/blob/main/src/gateway/hooks.ts) | Gmail: auto-registration via `gog gmail watch start`, auto-renewal every 12h, verification via `X-Gog-Token` header. Gateway hooks: webhook endpoint at `/hooks/*` with template-based routing, auth (Bearer/X-OpenClaw-Token), rate limiting (20 failed/60s → 429). |
 | Retry primitives | native | [`src/infra/retry.ts`](https://github.com/openclaw/openclaw/blob/main/src/infra/retry.ts), [`src/infra/backoff.ts`](https://github.com/openclaw/openclaw/blob/main/src/infra/backoff.ts) | Exponential backoff with jitter, configurable attempts/min/max delay. Per-channel tuning (Discord: 3 attempts 500-30000ms; Telegram: 3 attempts 400-30000ms + `retry_after` extraction). Circuit breaker for Telegram 401s (suspends after 10 consecutive failures). |
 | Deduplication / idempotency | native | [`src/infra/dedupe.ts`](https://github.com/openclaw/openclaw/blob/main/src/infra/dedupe.ts), [`src/plugin-sdk/persistent-dedupe.ts`](https://github.com/openclaw/openclaw/blob/main/src/plugin-sdk/persistent-dedupe.ts) | Dual-layer: in-memory (TTL + LRU, 20-min TTL, 5000 entries for web inbound) + persistent disk (file-locked JSON with exponential backoff locking). Inflight promise deduplication. Used for WhatsApp, Discord, Feishu webhooks. **Amara still needs cross-channel task-level dedup** (same request via WhatsApp + email → single task). |
@@ -128,6 +180,12 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Canvas / A2UI | native | [`src/canvas-host/`](https://github.com/openclaw/openclaw/tree/main/src/canvas-host), [`vendor/a2ui/`](https://github.com/openclaw/openclaw/tree/main/vendor/a2ui) | Agent-generated HTML served via Gateway. A2UI spec with Angular + Lit renderers. Cross-platform action bridge (iOS/Android/Web). Live reload in dev mode. File serving with range requests. |
 | Docker sandboxing | native | [`src/agents/sandbox/`](https://github.com/openclaw/openclaw/tree/main/src/agents/sandbox), `Dockerfile.sandbox` | Per-session containers (scope: session/agent/shared). Workspace access: none/ro/rw. Security: blocked bind sources (`docker.sock`, `/etc`, `/proc`, `/sys`, `/dev`), capability dropping, seccomp/AppArmor profiles, network isolation (bridge/none/custom). Resource limits: pids, memory, CPU, ulimits. |
 | Multi-provider LLM | native | [Model providers docs](https://docs.openclaw.ai/concepts/model-providers) | 13+ built-in (OpenAI, Anthropic, Gemini, OpenRouter, Groq, etc.) + local (Ollama, vLLM, LM Studio). Two API types: openai-completions, anthropic-messages. |
+| Audio transcription (STT) | native | v2026.3.2-beta.1 `transcribeAudioFile()` API | (beta — verify on stable) Transcribes audio files to text. P2 enhancement for Amara — voice message handling is not v1 scope. |
+| PDF analysis | native | v2026.3.2-beta.1 | Native PDF content extraction and analysis capabilities. |
+| CLI config validation | native | v2026.3.2-beta.1 `openclaw config validate --json` | Machine-readable config validation output. Useful for onboarding and deployment verification (Epic 11). |
+| Ollama embeddings | native | v2026.3.2-beta.1 | Local embedding generation via Ollama provider. Extends vector search options beyond OpenAI embeddings. |
+| Session attachments | native | v2026.3.2-beta.1 | (beta — verify on stable) File passing between agent sessions. Enables structured file handoff in orchestrator delegation. |
+| Channel runtime context | native | v2026.3.2-beta.1 `channelRuntime` on gateway context | (beta — verify on stable) Runtime state inspection for channel adapters. Useful for health checks and normalization layer state access. |
 
 ## 3. Gap Analysis
 
@@ -137,9 +195,9 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 
 | Gap | Proposed Owner | Downstream Epic | Notes |
 |---|---|---|---|
-| Triage layer (two-mode architecture) | Amara core | Epic 1, Epic 5 | Fast decision engine between normalization and orchestrator. Routes direct-mode messages straight to queue; evaluates monitored-mode messages on a spectrum (autonomous action → escalate). Must handle high throughput (hundreds of messages/day) with <200ms decision latency. See Section 7 for triage decision spectrum. |
+| Triage layer (two-mode architecture) | Amara core | Epic 1, Epic 5 | Fast decision engine between normalization and orchestrator. Routes direct-mode messages straight to queue; evaluates monitored-mode messages on a spectrum (autonomous action → escalate). Must handle high throughput (hundreds of messages/day) with <200ms decision latency. See Section 7 for triage decision spectrum. **v2026.3.2-beta.1 delta:** `message:preprocessed` hook (beta — verify on stable) provides a native interception point before message processing; may serve as a cleaner hook for the triage layer. **Amara still builds:** mode routing logic, rules engine, action engine, triage log. **Priority unchanged (P0):** hook provides interception point only, not triage logic. |
 | Task state machine | Amara core | Epic 1 | SQLite-backed states: `pending → in_progress → blocked → complete \| failed`. OpenClaw has no task lifecycle concept. |
-| Follow-up / re-check scheduler | Amara core | Epic 1 | OpenClaw cron exists but is session-isolated. Need task-aware scheduling that re-checks in-progress tasks and re-queues stalled work. |
+| Follow-up / re-check scheduler | Amara core | Epic 1 | OpenClaw cron exists but is session-isolated. Need task-aware scheduling that re-checks in-progress tasks and re-queues stalled work. **v2026.3.2-beta.1 delta:** `requestHeartbeatNow()` (beta — verify on stable) provides an on-demand trigger mechanism for immediate re-checks. **Amara still builds:** scheduling logic (reading Task DB, deciding what to re-check, stall detection thresholds). **Priority unchanged (P0):** trigger mechanism only, not scheduling logic. |
 | Cross-channel task-level idempotency | Amara core | Epic 1 | OpenClaw has message-level dedup (dual-layer: memory + persistent disk) per channel. Amara needs *task*-level dedup across channels — same request via WhatsApp and email must not create duplicate tasks. Requires semantic matching, not just message ID dedup. |
 | Event reliability (DB-backed queue) | Amara core | Epic 1 | OpenClaw plugin hooks are synchronous and don't provide replay on failure. Amara needs at-least-once delivery for task-critical events. SQLite WAL-mode queue with crash recovery. |
 
@@ -150,13 +208,13 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Orchestrator / planner | Amara core | Epic 5 | The always-on brain. OpenClaw provides agent sessions but no orchestration layer. Amara must build: intake → plan → delegate → track → complete. |
 | Agent registry | Amara core | Epic 4 | YAML + markdown bundles defining specialist agents. OpenClaw multi-agent routing is per-channel, not per-capability. Amara needs capability-based routing. |
 | Structured I/O contract | Amara core | Epic 4 | Agents need typed input/output schemas for task assignments and results. OpenClaw provides JSON transport (D7), but Amara must define the semantic contract: task assignment format, result report format, and schema versioning. |
-| Multi-agent coordination | Amara core | Epic 5 | Parallel task execution, result aggregation, conflict resolution. OpenClaw `agentToAgent` is basic point-to-point. |
+| Multi-agent coordination | Amara core | Epic 5 | Parallel task execution, result aggregation, conflict resolution. OpenClaw `agentToAgent` is basic point-to-point. **v2026.3.2-beta.1 delta:** `onAgentEvent` and `onSessionTranscriptUpdate` (beta — verify on stable) provide runtime tracking signals for delegation progress and transcript changes. **Amara still builds:** coordination logic, conflict resolution, result aggregation, parallel task management. **Priority unchanged (P1):** signals aid monitoring, not coordination logic. |
 | Human escalation loop | Amara core | Epic 6 | When blocked or ambiguous, route to human for decision. OpenClaw has no escalation concept. |
 | Gmail enhanced compose | Amara service | Epic 8 | `gog gmail send` provides text, HTML, reply-to, and draft support natively. Amara needs: attachment handling (beyond `--body-file`), template-based compose, batch operations. Build as thin wrapper over `gog`. |
 | Gmail message management (triage actions) | Amara service | Epic 8 | Triage layer needs `gmail.modify` scope to archive, label, and mark messages as read autonomously. `gog` provides send/compose but not inbox management. Amara must call Gmail API directly for modify operations (archive, add/remove labels, mark read/unread). |
 | Calendar event model | Amara service | Epic 8 | `gog` provides full CRUD (list/create/update with colors). v1 scope: conflict detection and scheduling suggestions. v2 scope: invite management, RSVP (requires direct Calendar API calls beyond `gog`). Build as analysis layer on top of native `gog` calendar data. |
 | Dashboard UI | Amara service | Epic 10 | Task visibility, audit log, triage activity feed. Leverage OpenClaw Canvas/A2UI as the rendering surface. Core dashboard (task views, audit log, triage log) in Milestone 1 for early visibility. Mobile-optimized layout deferred to Milestone 6 polish. |
-| Channel adapter normalization | Amara core | Epic 7 | OpenClaw channels emit different event shapes. Amara needs a common envelope format for the orchestrator. Channel binding config must support two modes: "monitor entire account" (monitored mode) vs "this thread is Amara's direct line" (direct mode). |
+| Channel adapter normalization | Amara core | Epic 7 | OpenClaw channels emit different event shapes. Amara needs a common envelope format for the orchestrator. Channel binding config must support two modes: "monitor entire account" (monitored mode) vs "this thread is Amara's direct line" (direct mode). **v2026.3.2-beta.1 delta:** `channelRuntime` on gateway context (beta — verify on stable) provides runtime state inspection for channel adapters. **Amara still builds:** AmaraEvent envelope conversion, channel binding configuration, mode field logic. **Priority unchanged (P1):** `channelRuntime` aids state inspection, not envelope conversion. |
 | Cross-channel threading / reply context | Amara core | Epic 7, Epic 8 | How are reply chains and thread context preserved across channels in the AmaraEvent envelope? Each channel has different threading models (WhatsApp: quoted message, Gmail: thread ID, Telegram: reply_to_message_id). Must be resolved before normalization layer. |
 
 ### P2 — Enhancements
@@ -193,7 +251,7 @@ Two platforms survived initial screening as viable hosts for Amara: **OpenClaw**
 | Gmail enhanced tools | OpenClaw tool plugin | Amara | low | planned (Epic 8) | Thin wrapper over native `gog gmail` — adds attachment handling, template compose, batch operations. Core send/receive is native. |
 | Calendar analysis tools | OpenClaw tool plugin | Amara | medium | planned (Epic 8) | v1: conflict detection, scheduling suggestions on native `gog calendar` CRUD. v2: invite management, RSVP (requires direct Calendar API). |
 | Gmail message management | OpenClaw tool plugin | Amara | low | planned (Epic 8) | Thin wrapper over Gmail API for inbox management — archive, label, mark read/unread. Required by triage layer for autonomous actions. Uses `gmail.modify` scope. |
-| Normalization layer | Amara internal | Amara | low | planned (Epic 7) | Converts channel events to common envelope. Too Amara-specific to extract. |
+| Normalization layer | Amara internal | Amara | low | planned (Epic 7) | Converts channel events to common envelope. Too Amara-specific to extract. Note: `channelRuntime` (v2026.3.2-beta.1, beta) may reduce extraction cost by providing runtime state inspection natively. |
 | Triage layer | Amara internal | Amara | low | planned (Epic 1, Epic 5) | Mode routing + fast triage + autonomous action engine. Core to Amara's two-mode architecture. Not extractable. |
 | Task state machine | Amara internal | Amara | low | planned (Epic 1) | Core to Amara's identity. Not extractable. |
 | Orchestrator | Amara internal | Amara | low | planned (Epic 5) | Amara's brain. Not extractable. |
@@ -331,6 +389,8 @@ Single-process means a crash in any plugin takes down the Gateway. Mitigations:
 ## 7. Data and Control Flows
 
 Amara operates in two modes. **Direct mode** is for messages explicitly addressed to Amara (dedicated conversation thread, specific email address). **Monitored mode** is for passive observation of all communications (full inbox, all group chats). The triage layer routes between them.
+
+> **v2026.3.2-beta.1 note:** The `message:preprocessed` hook (beta — verify event shape on stable release) may provide a cleaner interception point for the triage layer than the current `message_received` hook. The hook fires before standard message processing, which aligns with triage's need to intercept early. Current diagrams remain valid — the hook is an implementation optimization, not a topology change. Evaluate during Epic 7 implementation.
 
 ### Direct Mode: User → Amara → Response
 
@@ -618,20 +678,21 @@ Amara monitors all communications across all channels. The triage layer makes a 
 | D4 | Channel strategy — WhatsApp | Use OpenClaw native Baileys adapter | Build custom adapter, use Meta Cloud API directly | Baileys adapter is battle-tested in OpenClaw. No reason to duplicate effort. Meta Cloud API requires business verification. | Dependent on Baileys library maintenance. No official WhatsApp support (Baileys reverse-engineers Web protocol). Acceptable risk for personal use. |
 | D5 | Channel strategy — Gmail | Use native `gog` Gmail integration + thin Amara enhancement layer | Build from scratch with Gmail API, use IMAP | `gog` provides full-featured Gmail: Pub/Sub push inbound (`gog gmail watch serve`), send/reply/draft outbound (`gog gmail send`), OAuth2 with auth-profiles. Amara adds: attachment handling, template compose, batch operations. No need to reimplement OAuth or push infrastructure. | Tied to `gog` CLI's API surface. Must monitor for breaking changes. Gmail Pub/Sub requires GCP project setup + Tailscale or equivalent tunnel. |
 | D6 | Channel strategy — Calendar | Use native `gog` Calendar integration + Amara analysis layer | Build from scratch with Google Calendar API | `gog` provides full Calendar CRUD: list events with date ranges, create/update with color support. Amara adds: conflict detection, invite management, scheduling suggestions. These are analysis features on top of native data access. | Tied to `gog` CLI's API surface. Calendar color IDs are Google-specific (1-11). No invite/RSVP in `gog` — Amara must call Calendar API directly for those. |
-| D7 | Inter-agent communication protocol | OpenClaw `agentToAgent` transport + Amara structured protocol | Custom WebSocket protocol, shared SQLite table, filesystem | OpenClaw provides the transport (JSON with schema validation). Amara defines the contract: typed task assignments, result reports, status updates. Avoids building transport layer. | Must define and version the protocol schema. Agent-to-agent requires explicit allowlisting in OpenClaw config. |
+| D7 | Inter-agent communication protocol | OpenClaw `agentToAgent` transport + Amara structured protocol | Custom WebSocket protocol, shared SQLite table, filesystem | OpenClaw provides the transport (JSON with schema validation). Amara defines the contract: typed task assignments, result reports, status updates. Avoids building transport layer. | Must define and version the protocol schema. Agent-to-agent requires explicit allowlisting in OpenClaw config. **v2026.3.2-beta.1 update:** ACP dispatch is now default-enabled — `agentToAgent` uses ACP by default. Verify delegation behavior; explicit opt-out available if needed. |
 | D8 | Dashboard hosting | OpenClaw Canvas/A2UI (served via Gateway) | Separate Express/Fastify server, static site, Electron app | Canvas provides agent-generated HTML served at Gateway's HTTP endpoint. No separate process, no CORS issues, no additional port. Mobile-friendly if properly designed. | Tied to Canvas API surface (relatively new feature). Limited to what A2UI can render. If Canvas proves too limiting, fall back to separate server (low migration cost). |
 | D9 | Secret management | Delegate to OpenClaw's existing auth-profiles mechanism | Vault, dotenv, OS keychain, custom encrypted store | OpenClaw handles OAuth tokens and API keys via `auth-profiles.json` per-agent with `SecretRef` indirection and fallback chain (agent → main → legacy). Amara adds no new secret types. OpenClaw has a built-in `openclaw security audit` CLI for checking filesystem permissions, sandbox config, and secret exposure. | Secrets at `~/.openclaw/agents/{agentId}/agent/auth-profiles.json`. Must ensure directory permissions are correct (0700). Tokens stored in plaintext JSON — encrypt at rest is a future enhancement. No centralized secret rotation — manual process. |
 | D10 | Agent registry format | File-based YAML + markdown bundles (Amara-owned) | Database-backed, OpenClaw plugin registry, API-based | Version-controllable (git), human-readable, hot-reloadable (watch filesystem). Aligns with Hermes SKILL.md concept. No database dependency for agent definitions. | Must implement file watcher for hot-reload. YAML parsing adds startup cost (negligible at expected scale). Schema validation needed to prevent malformed bundles. |
 | D11 | Channel normalization approach | Thin Amara layer converting channel events to common envelope | OpenClaw middleware, per-channel adapters with no common format | Common envelope format enables channel-agnostic orchestration. Thin layer minimizes maintenance. OpenClaw handles transport; Amara handles semantics. | Must define and maintain the AmaraEvent schema. New channels require a normalization mapping. Envelope must be extensible for channel-specific metadata. Envelope includes `mode` field (`monitored` \| `direct`) set by channel binding configuration (D13). |
 | D12 | Memory architecture | Use OpenClaw native memory + Amara Task DB for task context | Custom memory system inspired by Hermes multi-level, replace OpenClaw memory entirely | OpenClaw's memory (SQLite + vector + FTS5) is capable. Amara's task-specific context lives in Task DB. No need to duplicate memory infrastructure. Incorporate Hermes insights (USER.md, SOUL.md layering) as future enhancement. | Two sources of context: OpenClaw memory (conversation) and Amara Task DB (task state). Orchestrator must query both. Future: consider adding USER.md-style profile for personalization. |
 | D13 | Two-mode architecture (passive monitoring + direct conversation) | Triage layer between normalization and orchestrator; two AmaraEvent modes (`monitored` and `direct`) | Single-pipeline (all messages through orchestrator), Separate monitoring service (out-of-process) | Amara must monitor ALL communications (full inbox, all WhatsApp conversations, full calendar) — not just messages addressed to her. Most messages (~90%+) need fast autonomous actions (archive spam, label, mark read), not full orchestrator pipeline. Single pipeline can't handle the throughput/latency requirements. Separate service adds deployment complexity unnecessarily for a single-process architecture. Triage layer in-process keeps latency low (<200ms) and shares access to config/state. | Must implement triage rules + tiny model. Must add `gmail.modify` OAuth scope. Triage log adds write volume to Task DB. Some autonomous actions are reversible (unarchive, remove label) but others may not be (mark as read loses the "unread" signal). Reversible actions should support undo via Dashboard. All actions require high-confidence thresholds regardless. Must define channel binding model (account-level monitoring vs thread-level direct). |
+| D15 | Minimum OpenClaw version pin | v2026.3.2-beta.1 | Previous stable release, wait for stable v2026.3.2 | v2026.3.2-beta.1 introduces features that directly address Amara's planned workarounds: `message:preprocessed` hook, `sessionKey` correlation, `onAgentEvent`/`onSessionTranscriptUpdate` tracking, `requestHeartbeatNow()`, session attachments, `channelRuntime`, `transcribeAudioFile()`, SecretRef expansion (64 targets), ACP dispatch default, and critical bug fixes (session lock PID recycling, hook duplicate dispatch). Waiting for stable release would delay implementation of all downstream epics. Beta risk is acceptable for development (not production). | All downstream epics must target this version minimum. Breaking changes require migration (see Section 1.6). **Review trigger:** Revisit when v2026.3.2 stable ships — verify all beta-caveat features are stable. **Rollback plan:** Revert to previous stable release. Features lost: `sessionKey` correlation (Epic 3 must use custom correlation), `message:preprocessed` hook (Epic 7 uses `message_received`), `onAgentEvent` tracking (Epic 5 must poll for delegation status), session attachments (Epic 9 uses alternative file passing), `requestHeartbeatNow()` (Epic 6 uses interval-only scheduling). Amara must implement custom alternatives for these capabilities. |
 | D14 | Channel write permissions | Visibility ≠ write permission. Monitored channels allow read + silent triage actions (archive, label, mark read, draft) but no outbound messaging by default. Sending messages requires explicit authorization (per-instruction grant or standing rule). Triage layer structurally cannot send messages. | Allow triage to auto-reply, Allow write in all monitored channels by default | Real-world failure mode: opening WhatsApp monitoring caused the agent to respond in every conversation. Monitored channels must be safe-by-default (read + silent triage actions, no outbound messaging). User controls message-sending access explicitly. Per-instruction grants are scoped to a single orchestrator task and target a specific channel/thread. Standing rules are persistent but audited. Grant schema details (max messages, retry semantics, expiry) deferred to Epic 5 orchestrator design. | Must implement authorization check in orchestrator outbound path. Must store standing rules in `~/.amara/config.yaml`. Must audit every outbound message with grant type. Notification routing: Amara never injects messages into monitored channels to notify the user — notifications go to the direct channel or Dashboard. |
 
 ## 11. Risks and Mitigations
 
 | # | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|---|
-| R1 | OpenClaw governance transition disrupts development | medium | high | Pin to known-good release tag. Monitor foundation transition. Maintain fork capability. All Amara code is in plugins that could migrate to another host. |
+| R1 | OpenClaw governance transition disrupts development | medium | high | Pin to v2026.3.2-beta.1 (D15). Monitor foundation transition. Maintain fork capability. All Amara code is in plugins that could migrate to another host. Beta-from-uncertain-governance compounds the risk — see R14. |
 | R2 | `gog` skill API surface changes or is deprecated | medium | medium | Amara wraps `gog` with its own tool plugins (D5, D6). If `gog` breaks, replace the inner implementation without changing Amara's interface. |
 | R3 | Baileys library breaks (WhatsApp protocol change) | medium | high | This affects all Baileys users, not just Amara. Community will fix quickly (large user base). Amara can temporarily disable WhatsApp channel without losing other channels. |
 | R4 | Canvas/A2UI proves too limiting for Dashboard | low | medium | Dashboard core is in Milestone 1 (early visibility). If Canvas is insufficient, fall back to a separate web server (Express/Fastify). Low migration cost — Amara owns the UI logic. Mobile polish deferred to Milestone 6. |
@@ -643,6 +704,7 @@ Amara monitors all communications across all channels. The triage layer makes a 
 | R10 | Agent sessions accumulate memory without bounds | low | medium | 90-day retention policy (Section 9). OpenClaw memory has temporal decay. Monitor RSS via OTLP metric. |
 | R11 | Triage layer misclassifies important message as spam/noise | medium | high | Conservative initial thresholds (>0.95 confidence for destructive actions like archive). Triage log provides full audit trail. Dashboard surfaces triage activity for human review. Undo capability for autonomous actions where possible (unarchive, remove label). Start with rules-only triage, add model-based classification after confidence is established. |
 | R12 | Triage layer throughput bottleneck under high email volume | low | medium | Level 1 triage is rules-based (no model call), target <200ms. Batch processing for email inbox sync (historical messages). Monitor triage latency via OTLP. If bottleneck emerges, add message-level parallelism within triage layer. |
+| R14 | Beta version pin stability risk | medium | medium | v2026.3.2-beta.1 is a pre-release. Beta-caveat features (`message:preprocessed`, `sessionKey`, `onAgentEvent`, `onSessionTranscriptUpdate`, `requestHeartbeatNow()`, session attachments, `channelRuntime`, `transcribeAudioFile()`) may change API shape before stable release. Mitigation: (1) isolate beta-dependent code behind well-defined interfaces, (2) review trigger on stable release (D15), (3) rollback plan documented in D15 — revert to previous stable with custom alternatives for lost features. Stable features (Node.js >=22.12, `registerHttpRoute()`, ACP default, SecretRef expansion, bug fixes) carry no beta risk. |
 | R13 | Amara sends unauthorized message in monitored channel | low | critical | Triage layer structurally cannot send messages (D14). Orchestrator checks write permission before every outbound in monitored channels. Per-instruction grants expire after task completion. Standing rules require explicit config. Default is no-write. Audit log records grant type for every outbound message. |
 
 ## 12. Exit Criteria
@@ -657,21 +719,21 @@ Epic 1 (and all other epics) may not begin until **all** of the following are tr
 - [x] Happy-path data flow is documented end-to-end (Section 7) — plus error and escalation paths
 - [x] Non-functional requirements have numeric targets (Section 8) — all rows filled
 - [x] Security and privacy constraints are written (Section 9) — OAuth scopes, secrets, PII, audit, deletion
-- [x] Decision log has at least one entry per major decision (Section 10) — 15 entries documented (D0–D14)
+- [x] Decision log has at least one entry per major decision (Section 10) — 16 entries documented (D0–D15)
 - [x] No open questions remain that could block Epic 1 design
 
 ### Downstream Epic Verification
 
 | Epic | Key Question | Answered By |
 |---|---|---|
-| Epic 1 (Core Infrastructure) | What storage engine? What event delivery guarantee? What does the triage layer do? | D2 (SQLite), D3 (WAL queue), D13 (two-mode architecture) |
+| Epic 1 (Core Infrastructure) | What storage engine? What event delivery guarantee? What does the triage layer do? What Node.js version? | D2 (SQLite), D3 (WAL queue), D13 (two-mode architecture), D15 (Node.js >=22.12, version requirement) |
 | Epic 2 (Security & Privacy) | What OAuth scopes? Where do secrets live? | Section 9, D9 |
-| Epic 3 (Observability) | What telemetry system? | Section 2 (native OTLP), Section 8 (metrics) |
+| Epic 3 (Observability) | What telemetry system? What session correlation? | Section 2 (native OTLP), Section 8 (metrics), `sessionKey` in lifecycle hooks (D15, beta-caveat) |
 | Epic 4 (Agent Registry) | What format? Where does it live? | D10 (YAML+MD, file-based) |
-| Epic 5 (Orchestrator) | In-process or separate? How do agents communicate? What events reach the orchestrator? How are outbound messages authorized? | D1 (in-process), D7 (structured protocol), D13 (only direct + escalated events), D14 (write permission check before outbound in monitored channels) |
+| Epic 5 (Orchestrator) | In-process or separate? How do agents communicate? What events reach the orchestrator? How are outbound messages authorized? How is delegation tracked? | D1 (in-process), D7 (structured protocol), D13 (only direct + escalated events), D14 (write permission check before outbound in monitored channels), `onAgentEvent`/`onSessionTranscriptUpdate` for delegation tracking + session attachments for file passing (D15, beta-caveat) |
 | Epic 6 (Recovery & HITL) | How does escalation work? | Section 7 (escalation path) |
 | Epic 7 (Channel Platform) | Use platform adapters or custom? How are channels bound (account vs thread)? | D4, D5, D6, D11 (platform + normalization), D13 (channel binding model) |
 | Epic 8 (Channel Integrations) | WhatsApp/Gmail/Calendar strategy? What envelope format? What triage actions need Gmail API? How are outbound writes authorized? | D4, D5, D6, D11 (envelope + mode field), D13 (Gmail inbox management for triage), D14 (write permission model for monitored channels) |
 | Epic 9 (Specialist Agents) | How are agents defined and routed? | D10, Section 4 (registry) |
 | Epic 10 (Dashboard) | Where does it run? | D8 (Canvas/A2UI) |
-| Epic 11 (Onboarding) | What runtime? What config? | D0 (Node.js/OpenClaw), Section 6 (data stores) |
+| Epic 11 (Onboarding) | What runtime? What config? What version prerequisites? | D0 (Node.js/OpenClaw), Section 6 (data stores), D15 (OpenClaw v2026.3.2-beta.1 prerequisite, Node.js >=22.12) |

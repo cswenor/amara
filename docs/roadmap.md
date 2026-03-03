@@ -15,6 +15,8 @@ Milestones follow epic dependencies. No milestone begins until its predecessors 
 - [x] NFRs, security constraints, and decision log documented
 - [x] Exit criteria met → implementation unlocked
 
+**OpenClaw version requirement:** v2026.3.2-beta.1 or later ([D15](epics/00-integration-architecture.md#10-decision-log))
+
 ## Milestone 1 — Foundation + Visibility
 
 **Epics:** 1, 2, 3, 10
@@ -93,7 +95,7 @@ Items not assigned to a milestone yet:
 
 - Triage model tuning (graduate from rules engine to ML classifier — D13)
 - User-authored recurring tasks (beyond core follow-up scheduler, which is P0 in Epic 1)
-- Sub-agent progress relay (real-time status)
+- Sub-agent progress relay (real-time status) — implementation approach available via `onAgentEvent`/`onSessionTranscriptUpdate` (v2026.3.2-beta.1, beta — verify on stable); core logic in Epic 5
 - Model-based routing (replace keyword heuristics)
 - Multi-user support
 - Additional channels (Slack, SMS, etc.)

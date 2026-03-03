@@ -14,7 +14,7 @@ The install flow, account connection, and getting-started documentation. The goa
 ## Scope
 
 **In:**
-- Prerequisites documentation (Node.js 22+, OpenClaw Gateway, Google OAuth credentials, accounts needed)
+- Prerequisites documentation (Node.js >=22.12, OpenClaw Gateway v2026.3.2-beta.1 or later (D15), Google OAuth credentials, accounts needed)
 - Install steps (clone, install deps, configure)
 - Account connection flow for each channel
 - Environment variable / config file documentation
@@ -63,8 +63,10 @@ The install flow, account connection, and getting-started documentation. The goa
 
 > Placeholder — to become GitHub issues.
 
-- [ ] Document prerequisites
+- [ ] Document prerequisites (Node.js >=22.12, OpenClaw v2026.3.2-beta.1 — D15)
 - [ ] Document install steps
+- [ ] Add `openclaw config validate --json` verification step to install flow (v2026.3.2-beta.1)
+- [ ] Document `tools.profile` configuration requirements for agent bundles (v2026.3.2-beta.1 breaking change)
 - [ ] Document WhatsApp account connection
 - [ ] Document Gmail account connection
 - [ ] Document Calendar account connection

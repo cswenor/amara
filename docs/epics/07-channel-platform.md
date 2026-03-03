@@ -23,6 +23,8 @@ Defines the stable adapter contract that all channel integrations (Epic 8) must 
 - Channel binding configuration: which channels are `direct` vs `monitored` (D13)
 - `thread_ref` field for conversation threading context (open — not yet specified)
 - Write permission enforcement: outbound on monitored channels blocked unless grant exists (D14)
+- `message:preprocessed` hook as candidate triage interception point (v2026.3.2-beta.1, beta — verify event shape provides sufficient context for mode routing before adoption)
+- `channelRuntime` on gateway context for channel state inspection (v2026.3.2-beta.1, beta — verify on stable)
 
 **Out:**
 - Specific channel implementations (Epic 8)
@@ -31,6 +33,8 @@ Defines the stable adapter contract that all channel integrations (Epic 8) must 
 ## Key Decisions
 
 - [x] Adapter interface: TypeScript — OpenClaw is Node.js/TypeScript (D0)
+- [x] Triage interception hook: `message:preprocessed` (v2026.3.2-beta.1, beta — verify event shape on stable). Provides early message access before standard processing. Evaluate whether event shape includes sufficient context for mode routing during implementation.
+- [x] Channel state inspection: `channelRuntime` on gateway context (v2026.3.2-beta.1, beta — verify on stable). Enables runtime health checks and adapter state access.
 - [ ] How is inbound idempotency implemented? (message ID deduplication table?) *(P0 gap: cross-channel task-level dedup — Epic 0, Section 3)*
 - [ ] Retry strategy: exponential backoff / fixed interval / channel-specific?
 - [ ] How are channel-level errors surfaced to the orchestrator?
@@ -68,6 +72,8 @@ Defines the stable adapter contract that all channel integrations (Epic 8) must 
 
 - [ ] Define adapter interface (TypeScript — D0)
 - [ ] Define AmaraEvent envelope schema with `mode` field (D11, D13)
+- [ ] Evaluate `message:preprocessed` hook for triage interception (D15, beta-caveat)
+- [ ] Implement `channelRuntime` integration for adapter health and state inspection (D15, beta-caveat)
 - [ ] Implement channel binding configuration (direct vs monitored per channel — D13)
 - [ ] Implement thread context resolution (`thread_ref` for conversation threading)
 - [ ] Define auth/webhook lifecycle

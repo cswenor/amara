@@ -27,7 +27,7 @@ Milestone 1 covers Epics 1, 2, 3, and 10: the foundational infrastructure, secur
 | S2.8 | Document input validation contracts | S | 2 | — | — |
 | S3.1 | Define structured logging standard | S | 3 | — | S2.3, S3.3 |
 | S3.2 | Implement OTLP/OpenTelemetry integration | M | 3 | — | S3.3, S3.7, S3.8 |
-| S3.3 | Implement correlation ID propagation | M | 3 | S1.1, S3.2 | — |
+| S3.3 | Implement correlation ID propagation (+ `sessionKey` mapping — D15 beta) | M | 3 | S1.1, S3.2 | — |
 | S3.4 | Define and implement agent outcome scoring | M | 3 | S1.1, S1.9 | S3.6 |
 | S3.5 | Document failure taxonomy | S | 3 | — | S3.6 |
 | S3.6 | Build eval harness | L | 3 | S3.4, S3.5 | — |
