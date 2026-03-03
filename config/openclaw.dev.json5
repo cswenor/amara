@@ -1,0 +1,20 @@
+// OpenClaw Gateway — development configuration
+// Used by `make dev` to start the gateway with the Amara plugin loaded.
+{
+  agents: {
+    defaults: {
+      workspace: "~/.openclaw/agents/amara-dev"
+    }
+  },
+  plugins: {
+    enabled: true,
+    load: {
+      // Points to this repo's root where openclaw.plugin.json lives.
+      // Set AMARA_ROOT to override (defaults to the repo working directory).
+      paths: ["${AMARA_ROOT:-.}"]
+    },
+    entries: {
+      amara: { enabled: true }
+    }
+  }
+}
