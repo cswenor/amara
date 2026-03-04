@@ -5,6 +5,12 @@
       "args": [
         "./tools/mcp/pm-intelligence/build/index.js"
       ]
+    },
+    "codex": {
+      "command": "codex",
+      "args": [
+        "mcp-server"
+      ]
     }
   }
 }
