@@ -15,6 +15,20 @@ An opinionated personal assistant. Connect your accounts and she manages your li
 
 ---
 
+## Getting Started
+
+```bash
+make setup                  # Install deps, verify OpenClaw CLI
+./scripts/setup-agent.sh    # Create dev agent workspace
+make build                  # Compile TypeScript
+make test                   # Run tests
+make dev                    # Start OpenClaw gateway with Amara plugin
+```
+
+See [docs/development/SETUP.md](./docs/development/SETUP.md) for full setup instructions.
+
+---
+
 ## Status
 
 Early days. The architecture is clear; the building is underway. See the [roadmap](./VISION.md#roadmap) for what's next.

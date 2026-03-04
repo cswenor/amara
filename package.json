@@ -5,9 +5,22 @@
   "description": "Opinionated personal assistant — manages your messages, tasks, calendar, and information",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "build": "tsc",
+    "test": "node --test --import tsx 'src/__tests__/**/*.test.ts'"
   },
   "engines": {
     "node": ">=22"
+  },
+  "openclaw": {
+    "extensions": ["./src/index.ts"]
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.48",
+    "openclaw": "2026.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
   }
 }

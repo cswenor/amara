@@ -1,0 +1,7 @@
+{
+  "id": "amara",
+  "configSchema": {
+    "type": "object",
+    "properties": {}
+  }
+}
