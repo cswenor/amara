@@ -8,8 +8,11 @@ importers:
 
   .:
     dependencies:
+      '@sinclair/typebox':
+        specifier: ^0.34.48
+        version: 0.34.48
       openclaw:
-        specifier: latest
+        specifier: 2026.3.2
         version: 2026.3.2(@napi-rs/canvas@0.1.95)(@types/express@5.0.6)(hono@4.12.4)(node-llama-cpp@3.16.2(typescript@5.9.3))
     devDependencies:
       '@types/node':

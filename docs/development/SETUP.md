@@ -81,8 +81,7 @@ amara/
 ├── src/
 │   ├── __tests__/
 │   │   └── plugin-load.test.ts
-│   ├── index.ts              # Plugin entry point
-│   └── types.ts              # Shared type definitions
+│   └── index.ts              # Plugin entry point
 ├── Makefile                  # Build targets
 ├── openclaw.plugin.json      # Plugin manifest
 ├── package.json

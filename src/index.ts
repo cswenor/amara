@@ -1,24 +1,19 @@
-import type { PluginApi } from "./types.js";
+import type { OpenClawPluginApi, AnyAgentTool } from "openclaw/plugin-sdk";
+import { jsonResult } from "openclaw/plugin-sdk";
+import { Type } from "@sinclair/typebox";
 
-/**
- * Register the Amara plugin with the OpenClaw Gateway.
- *
- * This is the plugin entry point invoked by the gateway at startup.
- * It registers tools and lifecycle hooks.
- */
-export default function register(api: PluginApi): void {
-  api.registerTool({
+export default function register(api: OpenClawPluginApi): void {
+  const helloTool: AnyAgentTool = {
     name: "amara_hello",
     description: "Amara hello world — verifies plugin is loaded",
-    inputSchema: { type: "object", properties: {} },
-    handler: async () => ({ text: "Hello from Amara!" }),
-  });
+    label: "Amara Hello",
+    parameters: Type.Object({}),
+    execute: async () => jsonResult({ text: "Hello from Amara!" }),
+  };
 
-  api.registerHook(
-    "gateway_start",
-    async () => {
-      api.logger.info("[amara] Plugin loaded successfully");
-    },
-    { name: "amara.startup" },
-  );
+  api.registerTool(helloTool);
+
+  api.on("gateway_start", async () => {
+    api.logger.info("[amara] Plugin loaded successfully");
+  });
 }
